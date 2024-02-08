@@ -1,23 +1,88 @@
-.classpath
-.project
-.metadata
+# Windows system files
+$RECYCLE.BIN/
+Thumbs.db
+Thumbs.db:encryptable
+[Dd]esktop.ini
+ehthumbs.db
+ehthumbs_vista.db
+hs_err_pid*
 
-target/
-dependency-reduced-pom.xml
-
+# macOS system files
+.AppleDB
+.AppleDesktop
+.AppleDouble
 .DS_Store
+.DocumentRevisions-V100
+.Icon
+.LSOverride
+.Network Trash Folder
+.Spotlight-V100
+.Temporary Items
+.TemporaryItems
+.Trash-*
+.Trashes
+.VolumeIcon.icns
+._*
+.apdisk
+.com.apple.timemachine.donotpresent
+.fseventsd
+.fuse_hidden*
 
-**/*.iml
-
-*.class
-*.jar
-*.war
-*.ear
-*.iml
-*.iws
-*.ipr
-
-.tm_*
-.idea/
+# IDE and editor folders
+.buildpath/
+.classpath/
 .gradle/
+.idea/
+.project/
+.settings/
+*.iml
+*.ipr
+*.iws
+*.sublime-project
+*.sublime-workspace
+
+# Java compiled files
+*.class
+*.ear
+*.nar
+*.war
+
+# Maven files
+.mvn/
+build/
 out/
+run/
+target/
+.flattened-pom.xml
+buildNumber.properties
+dependency-reduced-pom.xml
+pom.xml.next
+pom.xml.releaseBackup
+pom.xml.tag
+pom.xml.versionsBackup
+release.properties
+
+# Package files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Archive files
+*.7z
+*.rar
+*.tar.gz
+*.zip
+
+# Log and temporary files
+*.ctxt
+*.lnk
+*.log
+*.stackdump
+*~
+.nfs*
+.tm_*
+
+# Misc
+machinet.conf

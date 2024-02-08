@@ -1,0 +1,109 @@
+plugins {
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'maven-publish'
+    id 'java'
+}
+
+group = 'com.zaxxer'
+version = '4.0.4'
+description = project.name
+
+compileJava.options.encoding = 'UTF-8'
+java.sourceCompatibility = JavaVersion.VERSION_1_8
+
+repositories {
+    // Maven repositories
+    mavenCentral()
+    mavenLocal()
+
+    // Local libraries
+    flatDir {
+        dirs 'libs'
+    }
+}
+
+dependencies {
+    // Javassist - for bytecode manipulation
+    // https://mvnrepository.com/artifact/org.javassist/javassist
+    compileOnly group: 'org.javassist', name: 'javassist', version: '3.30.2-GA'
+
+    // Prometheus Simpleclient - for metrics
+    // https://mvnrepository.com/artifact/io.prometheus/simpleclient
+    compileOnly group: 'io.prometheus', name: 'simpleclient', version: '0.16.0'
+
+    // Micrometer Core - for metrics
+    // https://mvnrepository.com/artifact/io.micrometer/micrometer-core
+    compileOnly group: 'io.micrometer', name: 'micrometer-core', version: '1.12.2'
+
+    // Hibernate Core - for database connections
+    // https://mvnrepository.com/artifact/org.hibernate/hibernate-core
+    compileOnly group: 'org.hibernate', name: 'hibernate-core', version: '5.6.15.Final'
+
+    // Metrics Core - for metrics
+    // https://mvnrepository.com/artifact/io.dropwizard.metrics/metrics-core
+    compileOnly group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.25'
+
+    // Metrics Health Checks - for health checks
+    // https://mvnrepository.com/artifact/io.dropwizard.metrics/metrics-healthchecks
+    compileOnly group: 'io.dropwizard.metrics', name: 'metrics-healthchecks', version: '4.2.25'
+
+    // SLF4J API - for logging
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
+    compileOnly group: 'org.slf4j', name: 'slf4j-api', version: '2.0.12'
+
+    // JetBrains Annotations - for code inspection and documentation
+    // https://mvnrepository.com/artifact/org.jetbrains/annotations
+    compileOnly group: 'org.jetbrains', name: 'annotations', version: '24.1.0'
+
+    // Lombok - for reducing boilerplate code
+    // https://projectlombok.org
+    compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.30'
+    annotationProcessor group: 'org.projectlombok', name: 'lombok', version: '1.18.30'
+}
+
+tasks {
+    shadowJar {
+        archiveFileName.set("${project.name}-${project.version}.jar")
+        enableRelocation = true
+        relocationPrefix = 'com.zaxxer.hikari.shaded'
+        minimize()
+    }
+
+    compileJava {
+        dependsOn(clean)
+    }
+
+    build {
+        dependsOn(shadowJar)
+    }
+
+    processResources {
+        filesMatching('**/*.yml') {
+            expand(project.properties)
+        }
+    }
+
+    tasks.register('sourceJar', Jar) {
+        from sourceSets.main.allJava
+    }
+
+    jar.configure {
+        archiveClassifier = 'default'
+    }
+
+    shadowJar.configure {
+        archiveClassifier = null
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId = "com.zaxxer.hikari"
+            artifactId = project.name
+            version = project.version
+
+            from components.java
+        }
+    }
+}

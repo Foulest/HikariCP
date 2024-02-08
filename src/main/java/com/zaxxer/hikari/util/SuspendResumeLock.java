@@ -1,19 +1,3 @@
-/*
- * Copyright (C) 2013, 2014 Brett Wooldridge
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.zaxxer.hikari.util;
 
 import java.sql.SQLException;
@@ -27,62 +11,60 @@ import java.util.concurrent.Semaphore;
  *
  * @author Brett Wooldridge
  */
-public class SuspendResumeLock
-{
-   public static final SuspendResumeLock FAUX_LOCK = new SuspendResumeLock(false) {
-      @Override
-      public void acquire() {}
+public class SuspendResumeLock {
 
-      @Override
-      public void release() {}
+    public static final SuspendResumeLock FAUX_LOCK = new SuspendResumeLock(false) {
+        @Override
+        public void acquire() {
+        }
 
-      @Override
-      public void suspend() {}
+        @Override
+        public void release() {
+        }
 
-      @Override
-      public void resume() {}
-   };
+        @Override
+        public void suspend() {
+        }
 
-   private static final int MAX_PERMITS = 10000;
-   private final Semaphore acquisitionSemaphore;
+        @Override
+        public void resume() {
+        }
+    };
 
-   /**
-    * Default constructor
-    */
-   public SuspendResumeLock()
-   {
-      this(true);
-   }
+    private static final int MAX_PERMITS = 10000;
+    private final Semaphore acquisitionSemaphore;
 
-   private SuspendResumeLock(final boolean createSemaphore)
-   {
-      acquisitionSemaphore = (createSemaphore ? new Semaphore(MAX_PERMITS, true) : null);
-   }
+    /**
+     * Default constructor
+     */
+    public SuspendResumeLock() {
+        this(true);
+    }
 
-   public void acquire() throws SQLException
-   {
-      if (acquisitionSemaphore.tryAcquire()) {
-         return;
-      }
-      else if (Boolean.getBoolean("com.zaxxer.hikari.throwIfSuspended")) {
-         throw new SQLTransientException("The pool is currently suspended and configured to throw exceptions upon acquisition");
-      }
+    private SuspendResumeLock(boolean createSemaphore) {
+        acquisitionSemaphore = (createSemaphore ? new Semaphore(MAX_PERMITS, true) : null);
+    }
 
-      acquisitionSemaphore.acquireUninterruptibly();
-   }
+    public void acquire() throws SQLException {
+        if (acquisitionSemaphore.tryAcquire()) {
+            return;
+        } else if (Boolean.getBoolean("com.zaxxer.hikari.throwIfSuspended")) {
+            throw new SQLTransientException("The pool is currently suspended and configured"
+                    + " to throw exceptions upon acquisition");
+        }
 
-   public void release()
-   {
-      acquisitionSemaphore.release();
-   }
+        acquisitionSemaphore.acquireUninterruptibly();
+    }
 
-   public void suspend()
-   {
-      acquisitionSemaphore.acquireUninterruptibly(MAX_PERMITS);
-   }
+    public void release() {
+        acquisitionSemaphore.release();
+    }
 
-   public void resume()
-   {
-      acquisitionSemaphore.release(MAX_PERMITS);
-   }
+    public void suspend() {
+        acquisitionSemaphore.acquireUninterruptibly(MAX_PERMITS);
+    }
+
+    public void resume() {
+        acquisitionSemaphore.release(MAX_PERMITS);
+    }
 }

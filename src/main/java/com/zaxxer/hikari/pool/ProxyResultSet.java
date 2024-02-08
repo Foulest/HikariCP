@@ -1,20 +1,6 @@
-/*
- * Copyright (C) 2013, 2014 Brett Wooldridge
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.zaxxer.hikari.pool;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -25,78 +11,80 @@ import java.sql.Statement;
  *
  * @author Brett Wooldridge
  */
-public abstract class ProxyResultSet implements ResultSet
-{
-   protected final ProxyConnection connection;
-   protected final ProxyStatement statement;
-   final ResultSet delegate;
+public abstract class ProxyResultSet implements ResultSet {
 
-   protected ProxyResultSet(ProxyConnection connection, ProxyStatement statement, ResultSet resultSet)
-   {
-      this.connection = connection;
-      this.statement = statement;
-      this.delegate = resultSet;
-   }
+    protected final ProxyConnection connection;
+    protected final ProxyStatement statement;
+    final ResultSet delegate;
 
-   final SQLException checkException(SQLException e)
-   {
-      return connection.checkException(e);
-   }
+    protected ProxyResultSet(ProxyConnection connection, ProxyStatement statement, ResultSet resultSet) {
+        this.connection = connection;
+        this.statement = statement;
+        delegate = resultSet;
+    }
 
-   /** {@inheritDoc} */
-   @Override
-   public String toString()
-   {
-      return this.getClass().getSimpleName() + '@' + System.identityHashCode(this) + " wrapping " + delegate;
-   }
+    final SQLException checkException(SQLException ex) {
+        return connection.checkException(ex);
+    }
 
-   // **********************************************************************
-   //                 Overridden java.sql.ResultSet Methods
-   // **********************************************************************
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + '@' + System.identityHashCode(this) + " wrapping " + delegate;
+    }
 
-   /** {@inheritDoc} */
-   @Override
-   public final Statement getStatement() throws SQLException
-   {
-      return statement;
-   }
+    // **********************************************************************
+    //                 Overridden java.sql.ResultSet Methods
+    // **********************************************************************
 
-   /** {@inheritDoc} */
-   @Override
-   public void updateRow() throws SQLException
-   {
-      connection.markCommitStateDirty();
-      delegate.updateRow();
-   }
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final Statement getStatement() {
+        return statement;
+    }
 
-   /** {@inheritDoc} */
-   @Override
-   public void insertRow() throws SQLException
-   {
-      connection.markCommitStateDirty();
-      delegate.insertRow();
-   }
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void updateRow() throws SQLException {
+        connection.markCommitStateDirty();
+        delegate.updateRow();
+    }
 
-   /** {@inheritDoc} */
-   @Override
-   public void deleteRow() throws SQLException
-   {
-      connection.markCommitStateDirty();
-      delegate.deleteRow();
-   }
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void insertRow() throws SQLException {
+        connection.markCommitStateDirty();
+        delegate.insertRow();
+    }
 
-   /** {@inheritDoc} */
-   @Override
-   @SuppressWarnings("unchecked")
-   public final <T> T unwrap(Class<T> iface) throws SQLException
-   {
-      if (iface.isInstance(delegate)) {
-         return (T) delegate;
-      }
-      else if (delegate != null) {
-          return delegate.unwrap(iface);
-      }
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void deleteRow() throws SQLException {
+        connection.markCommitStateDirty();
+        delegate.deleteRow();
+    }
 
-      throw new SQLException("Wrapped ResultSet is not an instance of " + iface);
-   }
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public final <T> T unwrap(@NotNull Class<T> iface) throws SQLException {
+        if (iface.isInstance(delegate)) {
+            return (T) delegate;
+        } else if (delegate != null) {
+            return delegate.unwrap(iface);
+        }
+        throw new SQLException("Wrapped ResultSet is not an instance of " + iface);
+    }
 }

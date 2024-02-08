@@ -1,19 +1,3 @@
-/*
- * Copyright (C) 2014 Brett Wooldridge
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.zaxxer.hikari.metrics.dropwizard;
 
 import com.codahale.metrics.MetricRegistry;
@@ -22,9 +6,12 @@ import com.codahale.metrics.health.HealthCheck;
 import com.codahale.metrics.health.HealthCheckRegistry;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.pool.HikariPool;
+import org.jetbrains.annotations.NotNull;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Properties;
+import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -42,83 +29,93 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Brett Wooldridge
  */
-public final class CodahaleHealthChecker
-{
-   /**
-    * Register Dropwizard health checks.
-    *
-    * @param pool the pool to register health checks for
-    * @param hikariConfig the pool configuration
-    * @param registry the HealthCheckRegistry into which checks will be registered
-    */
-   public static void registerHealthChecks(final HikariPool pool, final HikariConfig hikariConfig, final HealthCheckRegistry registry)
-   {
-      final var healthCheckProperties = hikariConfig.getHealthCheckProperties();
+public final class CodahaleHealthChecker {
 
-      final var checkTimeoutMs = Long.parseLong(healthCheckProperties.getProperty("connectivityCheckTimeoutMs", String.valueOf(hikariConfig.getConnectionTimeout())));
-      registry.register(MetricRegistry.name(hikariConfig.getPoolName(), "pool", "ConnectivityCheck"), new ConnectivityHealthCheck(pool, checkTimeoutMs));
+    /**
+     * Register Dropwizard health checks.
+     *
+     * @param pool         the pool to register health checks for
+     * @param hikariConfig the pool configuration
+     * @param registry     the HealthCheckRegistry into which checks will be registered
+     */
+    public static void registerHealthChecks(HikariPool pool,
+                                            @NotNull HikariConfig hikariConfig,
+                                            @NotNull HealthCheckRegistry registry) {
+        Properties healthCheckProperties = hikariConfig.getHealthCheckProperties();
+        MetricRegistry metricRegistry = (MetricRegistry) hikariConfig.getMetricRegistry();
 
-      final var expected99thPercentile = Long.parseLong(healthCheckProperties.getProperty("expected99thPercentileMs", "0"));
+        long checkTimeoutMs = Long.parseLong(healthCheckProperties.getProperty("connectivityCheckTimeoutMs",
+                String.valueOf(hikariConfig.getConnectionTimeout())));
 
-      final Object metricRegistryObj = hikariConfig.getMetricRegistry();
+        registry.register(MetricRegistry.name(hikariConfig.getPoolName(), "pool", "ConnectivityCheck"),
+                new ConnectivityHealthCheck(pool, checkTimeoutMs));
 
-      if (expected99thPercentile > 0 && metricRegistryObj instanceof MetricRegistry) {
-         final var metricRegistry = (MetricRegistry) metricRegistryObj;
-         var timers = metricRegistry.getTimers((name, metric) -> name.equals(MetricRegistry.name(hikariConfig.getPoolName(), "pool", "Wait")));
+        long expected99thPercentile = Long.parseLong(healthCheckProperties.getProperty(
+                "expected99thPercentileMs", "0"));
 
-         if (!timers.isEmpty()) {
-            final var timer = timers.entrySet().iterator().next().getValue();
-            registry.register(MetricRegistry.name(hikariConfig.getPoolName(), "pool", "Connection99Percent"), new Connection99Percent(timer, expected99thPercentile));
-         }
-      }
-   }
+        if (metricRegistry != null && expected99thPercentile > 0) {
+            SortedMap<String, Timer> timers = metricRegistry.getTimers((name, metric) ->
+                    name.equals(MetricRegistry.name(hikariConfig.getPoolName(), "pool", "Wait")));
 
-   private CodahaleHealthChecker()
-   {
-      // private constructor
-   }
+            if (!timers.isEmpty()) {
+                Timer timer = timers.entrySet().iterator().next().getValue();
 
-   private static class ConnectivityHealthCheck extends HealthCheck
-   {
-      private final HikariPool pool;
-      private final long checkTimeoutMs;
+                registry.register(MetricRegistry.name(hikariConfig.getPoolName(), "pool",
+                        "Connection99Percent"), new Connection99Percent(timer, expected99thPercentile));
+            }
+        }
+    }
 
-      ConnectivityHealthCheck(final HikariPool pool, final long checkTimeoutMs)
-      {
-         this.pool = pool;
-         this.checkTimeoutMs = (checkTimeoutMs > 0 && checkTimeoutMs != Integer.MAX_VALUE ? checkTimeoutMs : TimeUnit.SECONDS.toMillis(10));
-      }
+    private CodahaleHealthChecker() {
+        // private constructor
+    }
 
-      /** {@inheritDoc} */
-      @Override
-      protected Result check() throws Exception
-      {
-         try (Connection connection = pool.getConnection(checkTimeoutMs)) {
-            return Result.healthy();
-         }
-         catch (SQLException e) {
-            return Result.unhealthy(e);
-         }
-      }
-   }
+    private static class ConnectivityHealthCheck extends HealthCheck {
 
-   private static class Connection99Percent extends HealthCheck
-   {
-      private final Timer waitTimer;
-      private final long expected99thPercentile;
+        private final HikariPool pool;
+        private final long checkTimeoutMs;
 
-      Connection99Percent(final Timer waitTimer, final long expected99thPercentile)
-      {
-         this.waitTimer = waitTimer;
-         this.expected99thPercentile = expected99thPercentile;
-      }
+        ConnectivityHealthCheck(HikariPool pool, long checkTimeoutMs) {
+            this.pool = pool;
+            this.checkTimeoutMs = (checkTimeoutMs > 0 && checkTimeoutMs != Integer.MAX_VALUE
+                    ? checkTimeoutMs : TimeUnit.SECONDS.toMillis(10));
+        }
 
-      /** {@inheritDoc} */
-      @Override
-      protected Result check() throws Exception
-      {
-         final long the99thPercentile = TimeUnit.NANOSECONDS.toMillis(Math.round(waitTimer.getSnapshot().get99thPercentile()));
-         return the99thPercentile <= expected99thPercentile ? Result.healthy() : Result.unhealthy("99th percentile connection wait time of %dms exceeds the threshold %dms", the99thPercentile, expected99thPercentile);
-      }
-   }
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected Result check() {
+            try (Connection ignored = pool.getConnection(checkTimeoutMs)) {
+                return Result.healthy();
+            } catch (SQLException e) {
+                return Result.unhealthy(e);
+            }
+        }
+    }
+
+    private static class Connection99Percent extends HealthCheck {
+
+        private final Timer waitTimer;
+        private final long expected99thPercentile;
+
+        Connection99Percent(Timer waitTimer, long expected99thPercentile) {
+            this.waitTimer = waitTimer;
+            this.expected99thPercentile = expected99thPercentile;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected Result check() {
+            long the99thPercentile = TimeUnit.NANOSECONDS.toMillis(
+                    Math.round(waitTimer.getSnapshot().get99thPercentile())
+            );
+
+            return the99thPercentile <= expected99thPercentile ? Result.healthy()
+                    : Result.unhealthy("99th percentile connection wait time of"
+                    + " %dms exceeds the threshold %dms", the99thPercentile, expected99thPercentile);
+        }
+    }
 }

@@ -1,34 +1,23 @@
-/*
- * Copyright (C) 2017 Brett Wooldridge
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.zaxxer.hikari.metrics;
 
 /**
  * @author Brett Wooldridge
  */
-public interface IMetricsTracker extends AutoCloseable
-{
-   default void recordConnectionCreatedMillis(long connectionCreatedMillis) {}
+public interface IMetricsTracker extends AutoCloseable {
 
-   default void recordConnectionAcquiredNanos(final long elapsedAcquiredNanos) {}
+    default void recordConnectionCreatedMillis(long connectionCreatedMillis) {
+    }
 
-   default void recordConnectionUsageMillis(final long elapsedBorrowedMillis) {}
+    default void recordConnectionAcquiredNanos(long elapsedAcquiredNanos) {
+    }
 
-   default void recordConnectionTimeout() {}
+    default void recordConnectionUsageMillis(long elapsedBorrowedMillis) {
+    }
 
-   @Override
-   default void close() {}
+    default void recordConnectionTimeout() {
+    }
+
+    @Override
+    default void close() {
+    }
 }
