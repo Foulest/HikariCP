@@ -37,7 +37,7 @@ dependencies {
 
     // Hibernate Core - for database connections
     // https://mvnrepository.com/artifact/org.hibernate/hibernate-core
-    compileOnly group: 'org.hibernate', name: 'hibernate-core', version: '5.6.15.Final'
+    compileOnly group: 'org.hibernate', name: 'hibernate-core', version: '6.4.4.Final'
 
     // Metrics Core - for metrics
     // https://mvnrepository.com/artifact/io.dropwizard.metrics/metrics-core
