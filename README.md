@@ -7,12 +7,15 @@
 **HikariCP** is a lightweight, high-performance JDBC connection pool.
 
 This is, of course, an updated fork of the original **[HikariCP](https://github.com/brettwooldridge/HikariCP)** project.
-Visit the original project for more information.
-
-Specifically, this is a fork of version **4.0.3**, the **Java 8** compatible version.
 
 All credit for the original project goes to the
 **[HikariCP](https://github.com/brettwooldridge/HikariCP/graphs/contributors)** team.
+
+## Overview
+
+I created this fork due to HikariCP dropping support for **Java 8** in version **4.0.3**.
+
+This fork aims to fix any issues present in that version while maintaining Java 8 compatibility.
 
 ## Features
 
