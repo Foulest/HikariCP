@@ -62,13 +62,12 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
 
     private final CopyOnWriteArrayList<T> sharedList;
     private final boolean weakThreadLocals;
-
     private final ThreadLocal<List<Object>> threadList;
     private final IBagStateListener listener;
     private final AtomicInteger waiters;
-    private volatile boolean closed;
-
     private final SynchronousQueue<T> handoffQueue;
+
+    private volatile boolean closed;
 
     public interface IConcurrentBagEntry {
 
@@ -156,7 +155,6 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
                 }
                 timeout -= elapsedNanos(start);
             } while (timeout > 10_000);
-
             return null;
         } finally {
             waiters.decrementAndGet();

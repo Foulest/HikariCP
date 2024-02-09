@@ -18,12 +18,12 @@ import static com.zaxxer.hikari.metrics.prometheus.PrometheusMetricsTrackerFacto
  * config.setMetricsTrackerFactory(new PrometheusHistogramMetricsTrackerFactory());
  * }</pre>
  */
+@SuppressWarnings("unused")
 public class PrometheusHistogramMetricsTrackerFactory implements MetricsTrackerFactory {
 
     private final static Map<CollectorRegistry, RegistrationStatus> registrationStatuses = new ConcurrentHashMap<>();
 
     private final HikariCPCollector collector = new HikariCPCollector();
-
     private final CollectorRegistry collectorRegistry;
 
     /**

@@ -7,6 +7,7 @@ import javax.sql.DataSource;
  *
  * @author Brett Wooldridge
  */
+@SuppressWarnings("unused")
 public interface HikariPoolMXBean {
 
     /**

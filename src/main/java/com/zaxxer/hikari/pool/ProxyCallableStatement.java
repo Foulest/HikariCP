@@ -12,8 +12,4 @@ public abstract class ProxyCallableStatement extends ProxyPreparedStatement impl
     protected ProxyCallableStatement(ProxyConnection connection, CallableStatement statement) {
         super(connection, statement);
     }
-
-    // **********************************************************************
-    //               Overridden java.sql.CallableStatement Methods
-    // **********************************************************************
 }

@@ -55,7 +55,9 @@ abstract class PoolBase {
 
     SQLExceptionOverride exceptionOverride;
 
-    private static final String[] RESET_STATES = {"readOnly", "autoCommit", "isolation", "catalog", "netTimeout", "schema"};
+    private static final String[] RESET_STATES = {"readOnly", "autoCommit",
+            "isolation", "catalog", "netTimeout", "schema"};
+
     private static final int UNINITIALIZED = -1;
     private static final int TRUE = 1;
     private static final int FALSE = 0;
@@ -71,7 +73,6 @@ abstract class PoolBase {
     private final String schema;
     private final boolean isReadOnly;
     private final boolean isAutoCommit;
-
     private final boolean isUseJdbc4Validation;
     private final boolean isIsolateInternalQueries;
 
@@ -85,7 +86,11 @@ abstract class PoolBase {
         schema = config.getSchema();
         isReadOnly = config.isReadOnly();
         isAutoCommit = config.isAutoCommit();
-        exceptionOverride = UtilityElf.createInstance(config.getExceptionOverrideClassName(), SQLExceptionOverride.class);
+
+        exceptionOverride = UtilityElf.createInstance(
+                config.getExceptionOverrideClassName(), SQLExceptionOverride.class
+        );
+
         transactionIsolation = UtilityElf.getTransactionIsolation(config.getTransactionIsolation());
 
         isQueryTimeoutSupported = UNINITIALIZED;
@@ -126,8 +131,8 @@ abstract class PoolBase {
                 } finally {
                     connection.close(); // continue with the close even if setNetworkTimeout() throws
                 }
-            } catch (Exception e) {
-                logger.debug("{} - Closing connection {} failed", poolName, connection, e);
+            } catch (Exception ex) {
+                logger.debug("{} - Closing connection {} failed", poolName, connection, ex);
             }
         }
     }
@@ -180,35 +185,42 @@ abstract class PoolBase {
         return new PoolEntry(newConnection(), this, isReadOnly, isAutoCommit);
     }
 
-    void resetConnectionState(Connection connection, ProxyConnection proxyConnection, int dirtyBits) throws SQLException {
+    void resetConnectionState(Connection connection, ProxyConnection proxyConnection,
+                              int dirtyBits) throws SQLException {
         int resetBits = 0;
 
-        if ((dirtyBits & DIRTY_BIT_READONLY) != 0 && proxyConnection.getReadOnlyState() != isReadOnly) {
+        if ((dirtyBits & DIRTY_BIT_READONLY) != 0
+                && proxyConnection.getReadOnlyState() != isReadOnly) {
             connection.setReadOnly(isReadOnly);
             resetBits |= DIRTY_BIT_READONLY;
         }
 
-        if ((dirtyBits & DIRTY_BIT_AUTOCOMMIT) != 0 && proxyConnection.getAutoCommitState() != isAutoCommit) {
+        if ((dirtyBits & DIRTY_BIT_AUTOCOMMIT) != 0
+                && proxyConnection.getAutoCommitState() != isAutoCommit) {
             connection.setAutoCommit(isAutoCommit);
             resetBits |= DIRTY_BIT_AUTOCOMMIT;
         }
 
-        if ((dirtyBits & DIRTY_BIT_ISOLATION) != 0 && proxyConnection.getTransactionIsolationState() != transactionIsolation) {
+        if ((dirtyBits & DIRTY_BIT_ISOLATION) != 0
+                && proxyConnection.getTransactionIsolationState() != transactionIsolation) {
             connection.setTransactionIsolation(transactionIsolation);
             resetBits |= DIRTY_BIT_ISOLATION;
         }
 
-        if ((dirtyBits & DIRTY_BIT_CATALOG) != 0 && catalog != null && !catalog.equals(proxyConnection.getCatalogState())) {
+        if ((dirtyBits & DIRTY_BIT_CATALOG) != 0
+                && catalog != null && !catalog.equals(proxyConnection.getCatalogState())) {
             connection.setCatalog(catalog);
             resetBits |= DIRTY_BIT_CATALOG;
         }
 
-        if ((dirtyBits & DIRTY_BIT_NETTIMEOUT) != 0 && proxyConnection.getNetworkTimeoutState() != networkTimeout) {
+        if ((dirtyBits & DIRTY_BIT_NETTIMEOUT) != 0
+                && proxyConnection.getNetworkTimeoutState() != networkTimeout) {
             setNetworkTimeout(connection, networkTimeout);
             resetBits |= DIRTY_BIT_NETTIMEOUT;
         }
 
-        if ((dirtyBits & DIRTY_BIT_SCHEMA) != 0 && schema != null && !schema.equals(proxyConnection.getSchemaState())) {
+        if ((dirtyBits & DIRTY_BIT_SCHEMA) != 0
+                && schema != null && !schema.equals(proxyConnection.getSchemaState())) {
             connection.setSchema(schema);
             resetBits |= DIRTY_BIT_SCHEMA;
         }
@@ -328,7 +340,10 @@ abstract class PoolBase {
         try {
             String username = config.getUsername();
             String password = config.getPassword();
-            connection = (username == null) ? unwrappedDataSource.getConnection() : unwrappedDataSource.getConnection(username, password);
+
+            connection = (username == null)
+                    ? unwrappedDataSource.getConnection()
+                    : unwrappedDataSource.getConnection(username, password);
 
             if (connection == null) {
                 throw new SQLTransientConnectionException("DataSource returned null unexpectedly");
@@ -394,8 +409,8 @@ abstract class PoolBase {
 
             executeSql(connection, config.getConnectionInitSql(), true);
             setNetworkTimeout(connection, networkTimeout);
-        } catch (SQLException e) {
-            throw new ConnectionSetupException(e);
+        } catch (SQLException ex) {
+            throw new ConnectionSetupException(ex);
         }
     }
 
@@ -614,8 +629,8 @@ abstract class PoolBase {
 
         private static final long serialVersionUID = 929872118275916521L;
 
-        ConnectionSetupException(Throwable t) {
-            super(t);
+        ConnectionSetupException(Throwable ex) {
+            super(ex);
         }
     }
 
@@ -632,8 +647,8 @@ abstract class PoolBase {
         public void execute(@NotNull Runnable command) {
             try {
                 command.run();
-            } catch (Exception t) {
-                LoggerFactory.getLogger(PoolBase.class).debug("Failed to execute: {}", command, t);
+            } catch (Exception ex) {
+                LoggerFactory.getLogger(PoolBase.class).debug("Failed to execute: {}", command, ex);
             }
         }
     }

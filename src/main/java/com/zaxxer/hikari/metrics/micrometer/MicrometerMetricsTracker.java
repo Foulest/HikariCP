@@ -6,6 +6,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import lombok.Getter;
 
 import java.util.concurrent.TimeUnit;
 
@@ -30,6 +31,7 @@ import java.util.concurrent.TimeUnit;
  *      };
  * </pre></blockquote>
  */
+@Getter
 @SuppressWarnings("FieldCanBeLocal")
 public class MicrometerMetricsTracker implements IMetricsTracker {
 
@@ -66,7 +68,7 @@ public class MicrometerMetricsTracker implements IMetricsTracker {
 
     MicrometerMetricsTracker(String poolName, PoolStats poolStats, MeterRegistry meterRegistry) {
         // poolStats must be held with a 'strong reference' even though it is never referenced within this class
-        this.poolStats = poolStats;  // DO NOT REMOVE
+        this.poolStats = poolStats; // DO NOT REMOVE
 
         this.meterRegistry = meterRegistry;
 

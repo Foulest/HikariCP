@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.sql.*;
 
+@SuppressWarnings("unused")
 @AllArgsConstructor
 public abstract class ProxyDatabaseMetaData implements DatabaseMetaData {
 
@@ -51,7 +52,9 @@ public abstract class ProxyDatabaseMetaData implements DatabaseMetaData {
     @Override
     public ResultSet getProcedureColumns(String catalog, String schemaPattern,
                                          String procedureNamePattern, String columnNamePattern) throws SQLException {
-        ResultSet resultSet = delegate.getProcedureColumns(catalog, schemaPattern, procedureNamePattern, columnNamePattern);
+        ResultSet resultSet = delegate.getProcedureColumns(catalog,
+                schemaPattern, procedureNamePattern, columnNamePattern);
+
         Statement statement = resultSet.getStatement();
 
         if (statement != null) {
@@ -320,7 +323,9 @@ public abstract class ProxyDatabaseMetaData implements DatabaseMetaData {
     @Override
     public ResultSet getFunctionColumns(String catalog, String schemaPattern,
                                         String functionNamePattern, String columnNamePattern) throws SQLException {
-        ResultSet resultSet = delegate.getFunctionColumns(catalog, schemaPattern, functionNamePattern, columnNamePattern);
+        ResultSet resultSet = delegate.getFunctionColumns(catalog,
+                schemaPattern, functionNamePattern, columnNamePattern);
+
         Statement statement = resultSet.getStatement();
 
         if (statement != null) {

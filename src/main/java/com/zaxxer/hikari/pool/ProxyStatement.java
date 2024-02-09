@@ -12,6 +12,7 @@ import java.sql.Statement;
  *
  * @author Brett Wooldridge
  */
+@SuppressWarnings({"unused", "SqlSourceToSinkFlow"})
 public abstract class ProxyStatement implements Statement {
 
     protected final ProxyConnection connection;

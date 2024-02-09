@@ -21,21 +21,22 @@ class PrometheusMetricsTracker implements IMetricsTracker {
             .create();
 
     private final static Summary ELAPSED_ACQUIRED_SUMMARY =
-            createSummary("hikaricp_connection_acquired_nanos", "Connection acquired time (ns)");
+            createSummary("hikaricp_connection_acquired_nanos",
+                    "Connection acquired time (ns)");
 
     private final static Summary ELAPSED_USAGE_SUMMARY =
-            createSummary("hikaricp_connection_usage_millis", "Connection usage (ms)");
+            createSummary("hikaricp_connection_usage_millis",
+                    "Connection usage (ms)");
 
     private final static Summary ELAPSED_CREATION_SUMMARY =
-            createSummary("hikaricp_connection_creation_millis", "Connection creation (ms)");
+            createSummary("hikaricp_connection_creation_millis",
+                    "Connection creation (ms)");
 
     private final static Map<CollectorRegistry, RegistrationStatus> registrationStatuses = new ConcurrentHashMap<>();
 
     private final String poolName;
     private final HikariCPCollector hikariCPCollector;
-
     private final Counter.Child connectionTimeoutCounterChild;
-
     private final Summary.Child elapsedAcquiredSummaryChild;
     private final Summary.Child elapsedUsageSummaryChild;
     private final Summary.Child elapsedCreationSummaryChild;

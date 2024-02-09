@@ -105,7 +105,11 @@ public final class UtilityElf {
         }
 
         LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>(queueSize);
-        ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1, 5, SECONDS, queue, threadFactory, policy);
+
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(
+                1, 1, 5, SECONDS, queue, threadFactory, policy
+        );
+
         executor.allowCoreThreadTimeOut(true);
         return executor;
     }
@@ -126,7 +130,10 @@ public final class UtilityElf {
             threadFactory = new DefaultThreadFactory(threadName, true);
         }
 
-        ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1, 5, SECONDS, queue, threadFactory, policy);
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(
+                1, 1, 5, SECONDS, queue, threadFactory, policy
+        );
+
         executor.allowCoreThreadTimeOut(true);
         return executor;
     }
@@ -157,9 +164,12 @@ public final class UtilityElf {
                             return iso.getLevelId();
                         }
                     }
-                    throw new IllegalArgumentException("Invalid transaction isolation value: " + transactionIsolationName);
+
+                    throw new IllegalArgumentException("Invalid transaction isolation value: "
+                            + transactionIsolationName);
                 } catch (NumberFormatException nfe) {
-                    throw new IllegalArgumentException("Invalid transaction isolation value: " + transactionIsolationName, nfe);
+                    throw new IllegalArgumentException("Invalid transaction isolation value: "
+                            + transactionIsolationName, nfe);
                 }
             }
         }

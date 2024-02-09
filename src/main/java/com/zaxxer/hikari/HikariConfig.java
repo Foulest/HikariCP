@@ -13,12 +13,13 @@ import org.slf4j.LoggerFactory;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.AccessControlException;
 import java.sql.Connection;
 import java.util.Properties;
@@ -27,6 +28,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.zaxxer.hikari.util.UtilityElf.getNullIfEmpty;
 import static com.zaxxer.hikari.util.UtilityElf.safeIsAssignableFrom;
@@ -35,11 +37,10 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 @Getter
 @Setter
-@SuppressWarnings({"SameParameterValue"})
+@SuppressWarnings({"SameParameterValue", "unused"})
 public class HikariConfig implements HikariConfigMXBean {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HikariConfig.class);
-
     private static final char[] ID_CHARACTERS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray();
     private static final long CONNECTION_TIMEOUT = SECONDS.toMillis(30);
     private static final long VALIDATION_TIMEOUT = SECONDS.toMillis(5);
@@ -47,36 +48,42 @@ public class HikariConfig implements HikariConfigMXBean {
     private static final long IDLE_TIMEOUT = MINUTES.toMillis(10);
     private static final long MAX_LIFETIME = MINUTES.toMillis(30);
     private static final long DEFAULT_KEEPALIVE_TIME = 0L;
+    private static final long MIN_LIFETIME = SECONDS.toMillis(30);
+    private static final long MIN_KEEPALIVE_TIME = MIN_LIFETIME; // Assuming the same minimum as lifetime for simplicity
+    private static final long MIN_LEAK_DETECTION_THRESHOLD = SECONDS.toMillis(2);
     private static final int DEFAULT_POOL_SIZE = 10;
-
-    private static final boolean unitTest = false;
+    private static final int MINIMUM_POOL_SIZE = 1;
+    private static final String POOL_NAME_PREFIX = "HikariPool-";
+    private static final AtomicInteger POOL_NUMBER = new AtomicInteger(0);
+    private static final Object POOL_NUMBER_LOCK = new Object();
+    private static final boolean UNIT_TEST = false;
 
     // Properties changeable at runtime through the HikariConfigMXBean
     private volatile String catalog;
+    private volatile String username;
+    private volatile String password;
     private volatile long connectionTimeout;
     private volatile long validationTimeout;
     private volatile long idleTimeout;
     private volatile long leakDetectionThreshold;
     private volatile long maxLifetime;
-    private volatile int maxPoolSize;
-    private volatile int minIdle;
-    private volatile String username;
-    private volatile String password;
+    private volatile int maximumPoolSize;
+    private volatile int minimumIdle;
     private long initializationFailTimeout;
     private String connectionInitSql;
     private String connectionTestQuery;
     private String dataSourceClassName;
-    private String dataSourceJndiName;
+    private String dataSourceJNDI;
     private String driverClassName;
     private String exceptionOverrideClassName;
     private String jdbcUrl;
     private String poolName;
     private String schema;
-    private String transactionIsolationName;
+    private String transactionIsolation;
     private boolean autoCommit;
-    private boolean isReadOnly;
+    private boolean readOnly;
     private boolean isolateInternalQueries;
-    private boolean isRegisterMbeans;
+    private boolean registerMbeans;
     private boolean allowPoolSuspension;
     private DataSource dataSource;
     private final Properties dataSourceProperties;
@@ -97,8 +104,8 @@ public class HikariConfig implements HikariConfigMXBean {
         dataSourceProperties = new Properties();
         healthCheckProperties = new Properties();
 
-        minIdle = -1;
-        maxPoolSize = -1;
+        minimumIdle = -1;
+        maximumPoolSize = -1;
         maxLifetime = MAX_LIFETIME;
         connectionTimeout = CONNECTION_TIMEOUT;
         validationTimeout = VALIDATION_TIMEOUT;
@@ -132,37 +139,12 @@ public class HikariConfig implements HikariConfigMXBean {
      */
     public HikariConfig(String propertyFileName) {
         this();
-
         loadProperties(propertyFileName);
     }
 
     // ***********************************************************************
     //                       HikariConfigMXBean methods
     // ***********************************************************************
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getCatalog() {
-        return catalog;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setCatalog(String catalog) {
-        this.catalog = catalog;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public long getConnectionTimeout() {
-        return connectionTimeout;
-    }
 
     /**
      * {@inheritDoc}
@@ -182,14 +164,6 @@ public class HikariConfig implements HikariConfigMXBean {
      * {@inheritDoc}
      */
     @Override
-    public long getIdleTimeout() {
-        return idleTimeout;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public void setIdleTimeout(long idleTimeoutMs) {
         if (idleTimeoutMs < 0) {
             throw new IllegalArgumentException("idleTimeout cannot be negative");
@@ -201,111 +175,33 @@ public class HikariConfig implements HikariConfigMXBean {
      * {@inheritDoc}
      */
     @Override
-    public long getLeakDetectionThreshold() {
-        return leakDetectionThreshold;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setLeakDetectionThreshold(long leakDetectionThresholdMs) {
-        leakDetectionThreshold = leakDetectionThresholdMs;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public long getMaxLifetime() {
-        return maxLifetime;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setMaxLifetime(long maxLifetimeMs) {
-        maxLifetime = maxLifetimeMs;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public int getMaximumPoolSize() {
-        return maxPoolSize;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setMaximumPoolSize(int maxPoolSize) {
-        if (maxPoolSize < 1) {
+    public void setMaximumPoolSize(int maximumPoolSize) {
+        if (maximumPoolSize < 1) {
             throw new IllegalArgumentException("maxPoolSize cannot be less than 1");
         }
-
-        this.maxPoolSize = maxPoolSize;
+        this.maximumPoolSize = maximumPoolSize;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public int getMinimumIdle() {
-        return minIdle;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setMinimumIdle(int minIdle) {
-        if (minIdle < 0) {
+    public void setMinimumIdle(int minimumIdle) {
+        if (minimumIdle < 0) {
             throw new IllegalArgumentException("minimumIdle cannot be negative");
         }
-        this.minIdle = minIdle;
-    }
-
-    /**
-     * Set the default password to use for DataSource.getConnection(username, password) calls.
-     *
-     * @param password the password
-     */
-    @Override
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    /**
-     * Set the default username used for DataSource.getConnection(username, password) calls.
-     *
-     * @param username the username
-     */
-    @Override
-    public void setUsername(String username) {
-        this.username = username;
+        this.minimumIdle = minimumIdle;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public long getValidationTimeout() {
-        return validationTimeout;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setValidationTimeout(long validationTimeoutMs) {
-        if (validationTimeoutMs < SOFT_TIMEOUT_FLOOR) {
+    public void setValidationTimeout(long validationTimeout) {
+        if (validationTimeout < SOFT_TIMEOUT_FLOOR) {
             throw new IllegalArgumentException("validationTimeout cannot be less than " + SOFT_TIMEOUT_FLOOR + "ms");
         }
-
-        validationTimeout = validationTimeoutMs;
+        this.validationTimeout = validationTimeout;
     }
 
     // ***********************************************************************
@@ -375,13 +271,9 @@ public class HikariConfig implements HikariConfigMXBean {
         dataSourceProperties.put(propertyName, value);
     }
 
-    public String getDataSourceJNDI() {
-        return dataSourceJndiName;
-    }
-
     public void setDataSourceJNDI(String jndiDataSource) {
         checkIfSealed();
-        dataSourceJndiName = jndiDataSource;
+        dataSourceJNDI = jndiDataSource;
     }
 
     public void setDataSourceProperties(Properties dsProperties) {
@@ -391,26 +283,29 @@ public class HikariConfig implements HikariConfigMXBean {
 
     public void setDriverClassName(String driverClassName) {
         checkIfSealed();
-
         Class<?> driverClass = attemptFromContextLoader(driverClassName);
+
         try {
             if (driverClass == null) {
                 driverClass = getClass().getClassLoader().loadClass(driverClassName);
-                LOGGER.debug("Driver class {} found in the HikariConfig class classloader {}", driverClassName, getClass().getClassLoader());
+                LOGGER.debug("Driver class {} found in the HikariConfig class classloader {}",
+                        driverClassName, getClass().getClassLoader());
             }
-        } catch (ClassNotFoundException e) {
-            LOGGER.error("Failed to load driver class {} from HikariConfig class classloader {}", driverClassName, getClass().getClassLoader());
+        } catch (ClassNotFoundException ex) {
+            LOGGER.error("Failed to load driver class {} from HikariConfig class classloader {}",
+                    driverClassName, getClass().getClassLoader());
         }
 
         if (driverClass == null) {
-            throw new RuntimeException("Failed to load driver class " + driverClassName + " in either of HikariConfig class loader or Thread context classloader");
+            throw new RuntimeException("Failed to load driver class " + driverClassName
+                    + " in either of HikariConfig class loader or Thread context classloader");
         }
 
         try {
             driverClass.getConstructor().newInstance();
             this.driverClassName = driverClassName;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to instantiate class " + driverClassName, e);
+        } catch (Exception ex) {
+            throw new RuntimeException("Failed to instantiate class " + driverClassName, ex);
         }
     }
 
@@ -494,7 +389,6 @@ public class HikariConfig implements HikariConfigMXBean {
         if (metricRegistry != null) {
             throw new IllegalStateException("cannot use setMetricsTrackerFactory() and setMetricRegistry() together");
         }
-
         this.metricsTrackerFactory = metricsTrackerFactory;
     }
 
@@ -513,7 +407,8 @@ public class HikariConfig implements HikariConfigMXBean {
 
             if (!safeIsAssignableFrom(metricRegistry, "com.codahale.metrics.MetricRegistry")
                     && !(safeIsAssignableFrom(metricRegistry, "io.micrometer.core.instrument.MeterRegistry"))) {
-                throw new IllegalArgumentException("Class must be instance of com.codahale.metrics.MetricRegistry or io.micrometer.core.instrument.MeterRegistry");
+                throw new IllegalArgumentException("Class must be instance of com.codahale.metrics.MetricRegistry"
+                        + " or io.micrometer.core.instrument.MeterRegistry");
             }
         }
 
@@ -533,7 +428,8 @@ public class HikariConfig implements HikariConfigMXBean {
             healthCheckRegistry = getObjectOrPerformJndiLookup(healthCheckRegistry);
 
             if (!(healthCheckRegistry instanceof HealthCheckRegistry)) {
-                throw new IllegalArgumentException("Class must be an instance of com.codahale.metrics.health.HealthCheckRegistry");
+                throw new IllegalArgumentException("Class must be an instance of"
+                        + " com.codahale.metrics.health.HealthCheckRegistry");
             }
         }
 
@@ -551,32 +447,13 @@ public class HikariConfig implements HikariConfigMXBean {
     }
 
     /**
-     * Determine whether the Connections in the pool are in read-only mode.
-     *
-     * @return {@code true} if the Connections in the pool are read-only, {@code false} if not
-     */
-    public boolean isReadOnly() {
-        return isReadOnly;
-    }
-
-    /**
      * Configures the Connections to be added to the pool as read-only Connections.
      *
      * @param readOnly {@code true} if the Connections in the pool are read-only, {@code false} if not
      */
     public void setReadOnly(boolean readOnly) {
         checkIfSealed();
-        isReadOnly = readOnly;
-    }
-
-    /**
-     * Determine whether HikariCP will self-register {@link HikariConfigMXBean} and {@link HikariPoolMXBean} instances
-     * in JMX.
-     *
-     * @return {@code true} if HikariCP will register MXBeans, {@code false} if it will not
-     */
-    public boolean isRegisterMbeans() {
-        return isRegisterMbeans;
+        this.readOnly = readOnly;
     }
 
     /**
@@ -586,15 +463,7 @@ public class HikariConfig implements HikariConfigMXBean {
      */
     public void setRegisterMbeans(boolean register) {
         checkIfSealed();
-        isRegisterMbeans = register;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getPoolName() {
-        return poolName;
+        registerMbeans = register;
     }
 
     /**
@@ -618,10 +487,6 @@ public class HikariConfig implements HikariConfigMXBean {
         scheduledExecutor = executor;
     }
 
-    public String getTransactionIsolation() {
-        return transactionIsolationName;
-    }
-
     /**
      * Set the default schema name to be set on connections.
      *
@@ -640,26 +505,29 @@ public class HikariConfig implements HikariConfigMXBean {
      */
     public void setExceptionOverrideClassName(String exceptionOverrideClassName) {
         checkIfSealed();
-
         Class<?> overrideClass = attemptFromContextLoader(exceptionOverrideClassName);
+
         try {
             if (overrideClass == null) {
                 overrideClass = getClass().getClassLoader().loadClass(exceptionOverrideClassName);
-                LOGGER.debug("SQLExceptionOverride class {} found in the HikariConfig class classloader {}", exceptionOverrideClassName, getClass().getClassLoader());
+                LOGGER.debug("SQLExceptionOverride class {} found in the HikariConfig class classloader {}",
+                        exceptionOverrideClassName, getClass().getClassLoader());
             }
-        } catch (ClassNotFoundException e) {
-            LOGGER.error("Failed to load SQLExceptionOverride class {} from HikariConfig class classloader {}", exceptionOverrideClassName, getClass().getClassLoader());
+        } catch (ClassNotFoundException ex) {
+            LOGGER.error("Failed to load SQLExceptionOverride class {} from HikariConfig class classloader {}",
+                    exceptionOverrideClassName, getClass().getClassLoader());
         }
 
         if (overrideClass == null) {
-            throw new RuntimeException("Failed to load SQLExceptionOverride class " + exceptionOverrideClassName + " in either of HikariConfig class loader or Thread context classloader");
+            throw new RuntimeException("Failed to load SQLExceptionOverride class " + exceptionOverrideClassName
+                    + " in either of HikariConfig class loader or Thread context classloader");
         }
 
         try {
             overrideClass.getConstructor().newInstance();
             this.exceptionOverrideClassName = exceptionOverrideClassName;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to instantiate class " + exceptionOverrideClassName, e);
+        } catch (Exception ex) {
+            throw new RuntimeException("Failed to instantiate class " + exceptionOverrideClassName, ex);
         }
     }
 
@@ -672,7 +540,7 @@ public class HikariConfig implements HikariConfigMXBean {
      */
     public void setTransactionIsolation(String isolationLevel) {
         checkIfSealed();
-        transactionIsolationName = isolationLevel;
+        transactionIsolation = isolationLevel;
     }
 
     /**
@@ -701,8 +569,8 @@ public class HikariConfig implements HikariConfigMXBean {
 
                 try {
                     field.set(other, field.get(this));
-                } catch (Exception e) {
-                    throw new RuntimeException("Failed to copy HikariConfig state: " + e.getMessage(), e);
+                } catch (Exception ex) {
+                    throw new RuntimeException("Failed to copy HikariConfig state: " + ex.getMessage(), ex);
                 }
             }
         }
@@ -720,7 +588,8 @@ public class HikariConfig implements HikariConfigMXBean {
         if (threadContextClassLoader != null) {
             try {
                 Class<?> driverClass = threadContextClassLoader.loadClass(driverClassName);
-                LOGGER.debug("Driver class {} found in Thread context class loader {}", driverClassName, threadContextClassLoader);
+                LOGGER.debug("Driver class {} found in Thread context class loader {}",
+                        driverClassName, threadContextClassLoader);
                 return driverClass;
             } catch (ClassNotFoundException ex) {
                 LOGGER.debug("Driver class {} not found in Thread context class loader {}, trying classloader {}",
@@ -734,7 +603,7 @@ public class HikariConfig implements HikariConfigMXBean {
     public void validate() {
         if (poolName == null) {
             poolName = generatePoolName();
-        } else if (isRegisterMbeans && poolName.contains(":")) {
+        } else if (registerMbeans && poolName.contains(":")) {
             throw new IllegalArgumentException("poolName cannot contain ':' when used with JMX");
         }
 
@@ -743,9 +612,9 @@ public class HikariConfig implements HikariConfigMXBean {
         catalog = getNullIfEmpty(catalog);
         connectionInitSql = getNullIfEmpty(connectionInitSql);
         connectionTestQuery = getNullIfEmpty(connectionTestQuery);
-        transactionIsolationName = getNullIfEmpty(transactionIsolationName);
+        transactionIsolation = getNullIfEmpty(transactionIsolation);
         dataSourceClassName = getNullIfEmpty(dataSourceClassName);
-        dataSourceJndiName = getNullIfEmpty(dataSourceJndiName);
+        dataSourceJNDI = getNullIfEmpty(dataSourceJNDI);
         driverClassName = getNullIfEmpty(driverClassName);
         jdbcUrl = getNullIfEmpty(jdbcUrl);
 
@@ -763,7 +632,7 @@ public class HikariConfig implements HikariConfigMXBean {
             } else if (jdbcUrl != null) {
                 LOGGER.warn("{} - using dataSourceClassName and ignoring jdbcUrl.", poolName);
             }
-        } else if (jdbcUrl != null || dataSourceJndiName != null) {
+        } else if (jdbcUrl != null || dataSourceJNDI != null) {
             // ok
         } else if (driverClassName != null) {
             LOGGER.error("{} - jdbcUrl is required with driverClassName.", poolName);
@@ -775,146 +644,187 @@ public class HikariConfig implements HikariConfigMXBean {
 
         validateNumerics();
 
-        if (LOGGER.isDebugEnabled() || unitTest) {
+        if (LOGGER.isDebugEnabled() || UNIT_TEST) {
             logConfiguration();
         }
     }
 
+    @SuppressWarnings("NonAtomicOperationOnVolatileField")
     private void validateNumerics() {
-        if (maxLifetime != 0 && maxLifetime < SECONDS.toMillis(30)) {
-            LOGGER.warn("{} - maxLifetime is less than 30000ms, setting to default {}ms.", poolName, MAX_LIFETIME);
-            maxLifetime = MAX_LIFETIME;
+        maxLifetime = validateValue("maxLifetime", maxLifetime,
+                MAX_LIFETIME, MIN_LIFETIME, false);
+
+        keepaliveTime = validateKeepaliveTime();
+        leakDetectionThreshold = validateLeakDetectionThreshold();
+
+        connectionTimeout = validateValue("connectionTimeout", connectionTimeout,
+                CONNECTION_TIMEOUT, SOFT_TIMEOUT_FLOOR, true);
+
+        validationTimeout = validateValue("validationTimeout", validationTimeout,
+                VALIDATION_TIMEOUT, SOFT_TIMEOUT_FLOOR, true);
+
+        maximumPoolSize = Math.max(maximumPoolSize, MINIMUM_POOL_SIZE);
+
+        minimumIdle = validateMinimumIdle();
+        idleTimeout = validateIdleTimeout();
+    }
+
+    private long validateValue(String propertyName, long currentValue,
+                               long defaultValue, long minValue, boolean useDefault) {
+        if (currentValue != 0 && currentValue < minValue) {
+            LOGGER.warn("{} - {} is less than {}ms, setting to {}ms.", poolName, propertyName, minValue, defaultValue);
+            return useDefault ? defaultValue : minValue;
+        }
+        return currentValue;
+    }
+
+    private long validateKeepaliveTime() {
+        if (keepaliveTime != 0 && keepaliveTime < MIN_KEEPALIVE_TIME) {
+            LOGGER.warn("{} - keepaliveTime is less than {}ms, disabling it.", poolName, MIN_KEEPALIVE_TIME);
+            return DEFAULT_KEEPALIVE_TIME;
         }
 
-        // keepalive time must larger than 30 seconds
-        if (keepaliveTime != 0 && keepaliveTime < SECONDS.toMillis(30)) {
-            LOGGER.warn("{} - keepaliveTime is less than 30000ms, disabling it.", poolName);
-            keepaliveTime = DEFAULT_KEEPALIVE_TIME;
-        }
-
-        // keepalive time must be less than maxLifetime (if maxLifetime is enabled)
         if (keepaliveTime != 0 && maxLifetime != 0 && keepaliveTime >= maxLifetime) {
             LOGGER.warn("{} - keepaliveTime is greater than or equal to maxLifetime, disabling it.", poolName);
-            keepaliveTime = DEFAULT_KEEPALIVE_TIME;
+            return DEFAULT_KEEPALIVE_TIME;
         }
+        return keepaliveTime;
+    }
 
-        if (leakDetectionThreshold > 0 && !unitTest) {
-            if (leakDetectionThreshold < SECONDS.toMillis(2) || (leakDetectionThreshold > maxLifetime && maxLifetime > 0)) {
-                LOGGER.warn("{} - leakDetectionThreshold is less than 2000ms or more than maxLifetime, disabling it.", poolName);
-                leakDetectionThreshold = 0;
+    private long validateLeakDetectionThreshold() {
+        if (leakDetectionThreshold > 0 && !UNIT_TEST) {
+            if (leakDetectionThreshold < MIN_LEAK_DETECTION_THRESHOLD
+                    || (leakDetectionThreshold > maxLifetime && maxLifetime > 0)) {
+                LOGGER.warn("{} - leakDetectionThreshold is less than {}ms or more than maxLifetime,"
+                        + " disabling it.", poolName, MIN_LEAK_DETECTION_THRESHOLD);
+                return 0;
             }
         }
+        return leakDetectionThreshold;
+    }
 
-        if (connectionTimeout < SOFT_TIMEOUT_FLOOR) {
-            LOGGER.warn("{} - connectionTimeout is less than {}ms, setting to {}ms.", poolName, SOFT_TIMEOUT_FLOOR, CONNECTION_TIMEOUT);
-            connectionTimeout = CONNECTION_TIMEOUT;
+    private int validateMinimumIdle() {
+        if (minimumIdle < 0 || minimumIdle > maximumPoolSize) {
+            return maximumPoolSize;
         }
+        return minimumIdle;
+    }
 
-        if (validationTimeout < SOFT_TIMEOUT_FLOOR) {
-            LOGGER.warn("{} - validationTimeout is less than {}ms, setting to {}ms.", poolName, SOFT_TIMEOUT_FLOOR, VALIDATION_TIMEOUT);
-            validationTimeout = VALIDATION_TIMEOUT;
-        }
-
-        if (maxPoolSize < 1) {
-            maxPoolSize = DEFAULT_POOL_SIZE;
-        }
-
-        if (minIdle < 0 || minIdle > maxPoolSize) {
-            minIdle = maxPoolSize;
-        }
-
-        if (idleTimeout + SECONDS.toMillis(1) > maxLifetime && maxLifetime > 0 && minIdle < maxPoolSize) {
+    private long validateIdleTimeout() {
+        if (idleTimeout + SECONDS.toMillis(1) > maxLifetime
+                && maxLifetime > 0 && minimumIdle < maximumPoolSize) {
             LOGGER.warn("{} - idleTimeout is close to or more than maxLifetime, disabling it.", poolName);
-            idleTimeout = 0;
-        } else if (idleTimeout != 0 && idleTimeout < SECONDS.toMillis(10) && minIdle < maxPoolSize) {
+            return 0;
+        } else if (idleTimeout != 0 && idleTimeout < SECONDS.toMillis(10) && minimumIdle < maximumPoolSize) {
             LOGGER.warn("{} - idleTimeout is less than 10000ms, setting to default {}ms.", poolName, IDLE_TIMEOUT);
-            idleTimeout = IDLE_TIMEOUT;
-        } else if (idleTimeout != IDLE_TIMEOUT && idleTimeout != 0 && minIdle == maxPoolSize) {
-            LOGGER.warn("{} - idleTimeout has been set but has no effect because the pool is operating as a fixed size pool.", poolName);
+            return IDLE_TIMEOUT;
+        } else if (idleTimeout != IDLE_TIMEOUT && idleTimeout != 0 && minimumIdle == maximumPoolSize) {
+            LOGGER.warn("{} - idleTimeout has been set but has no effect because"
+                    + " the pool is operating as a fixed size pool.", poolName);
         }
+        return idleTimeout;
     }
 
     private void checkIfSealed() {
         if (sealed) {
-            throw new IllegalStateException("The configuration of the pool is sealed once started. Use HikariConfigMXBean for runtime changes.");
+            throw new IllegalStateException("The configuration of the pool is sealed once started."
+                    + " Use HikariConfigMXBean for runtime changes.");
         }
     }
 
     private void logConfiguration() {
+        if (!LOGGER.isDebugEnabled()) {
+            return; // Skip processing if debug logging is not enabled
+        }
+
         LOGGER.debug("{} - configuration:", poolName);
         Set<String> propertyNames = new TreeSet<>(PropertyElf.getPropertyNames(HikariConfig.class));
 
         for (String prop : propertyNames) {
             try {
-                Object value = PropertyElf.getProperty(prop, this);
-
-                if ("dataSourceProperties".equals(prop)) {
-                    Properties dsProps = PropertyElf.copyProperties(dataSourceProperties);
-                    dsProps.setProperty("password", "<masked>");
-                    value = dsProps;
-                }
-
-                if ("initializationFailTimeout".equals(prop) && initializationFailTimeout == Long.MAX_VALUE) {
-                    value = "infinite";
-                } else if ("transactionIsolation".equals(prop) && transactionIsolationName == null) {
-                    value = "default";
-                } else if (prop.matches("scheduledExecutorService|threadFactory") && value == null) {
-                    value = "internal";
-                } else if (prop.contains("jdbcUrl") && value instanceof String) {
-                    value = ((String) value).replaceAll("([?&;]password=)[^&#;]*(.*)", "$1<masked>$2");
-                } else if (prop.contains("password")) {
-                    value = "<masked>";
-                } else if (value instanceof String) {
-                    value = "\"" + value + "\""; // quote to see lead/trailing spaces is any
-                } else if (value == null) {
-                    value = "none";
-                }
-
-                LOGGER.debug("{}{}", (prop + "................................................".substring(0, 32)), value);
+                Object value = getMaskedPropertyValue(prop);
+                String formattedProp = String.format("%-32s", prop); // Ensure left-aligned & padded to 32 characters
+                LOGGER.debug("{}{}", formattedProp, value);
             } catch (Exception ignored) {
             }
         }
     }
 
-    private void loadProperties(String propertyFileName) {
-        File propFile = new File(propertyFileName);
+    private Object getMaskedPropertyValue(String prop) {
+        Object value;
 
-        try (InputStream is = propFile.isFile() ? Files.newInputStream(propFile.toPath())
-                : getClass().getResourceAsStream(propertyFileName)) {
-            if (is != null) {
-                Properties props = new Properties();
-                props.load(is);
-                PropertyElf.setTargetFromProperties(this, props);
-            } else {
-                throw new IllegalArgumentException("Cannot find property file: " + propertyFileName);
+        try {
+            value = PropertyElf.getProperty(prop, this);
+
+            switch (prop) {
+                case "dataSourceProperties":
+                    Properties dsProps = PropertyElf.copyProperties(dataSourceProperties);
+                    dsProps.setProperty("password", "<masked>");
+                    value = dsProps;
+                    break;
+
+                case "initializationFailTimeout":
+                    value = (initializationFailTimeout == Long.MAX_VALUE) ? "infinite" : value;
+                    break;
+
+                case "transactionIsolation":
+                    value = (transactionIsolation == null) ? "default" : value;
+                    break;
+
+                case "scheduledExecutorService":
+                case "threadFactory":
+                    value = (value == null) ? "internal" : value;
+                    break;
+
+                default:
+                    if (prop.contains("jdbcUrl") && value instanceof String) {
+                        value = ((String) value).replaceAll("([?&;]password=)[^&#;]*(.*)", "$1<masked>$2");
+                    } else if (prop.contains("password")) {
+                        value = "<masked>";
+                    } else if (value instanceof String) {
+                        value = "\"" + value + "\""; // Add quotes for visibility
+                    } else if (value == null) {
+                        value = "none";
+                    }
+                    break;
             }
+        } catch (Exception ex) {
+            value = "error"; // Fallback in case of an error
+        }
+        return value;
+    }
+
+    private void loadProperties(String propertyFileName) {
+        Properties props = new Properties();
+        Path propFilePath = Paths.get(propertyFileName);
+
+        try (InputStream is = Files.exists(propFilePath)
+                ? Files.newInputStream(propFilePath)
+                : getClass().getResourceAsStream(propertyFileName)) {
+            if (is == null) {
+                throw new IllegalArgumentException("Cannot find property file: " + propertyFileName, null);
+            }
+
+            props.load(is);
+            PropertyElf.setTargetFromProperties(this, props);
         } catch (IOException ex) {
-            throw new RuntimeException("Failed to read property file", ex);
+            throw new RuntimeException("Failed to read property file: " + propertyFileName, ex);
         }
     }
 
     private @NotNull String generatePoolName() {
-        final String prefix = "HikariPool-";
-
         try {
-            // Pool number is global to the VM to avoid overlapping pool numbers in classloader scoped environments
-            synchronized (System.getProperties()) {
-                String next = String.valueOf(Integer.getInteger("com.zaxxer.hikari.pool_number", 0) + 1);
-                System.setProperty("com.zaxxer.hikari.pool_number", next);
-                return prefix + next;
+            int nextNum;
+            synchronized (POOL_NUMBER_LOCK) {
+                // No need to interact with System properties; use an AtomicInteger instead.
+                nextNum = POOL_NUMBER.incrementAndGet();
             }
+            return POOL_NAME_PREFIX + nextNum;
         } catch (AccessControlException ex) {
-            // The SecurityManager didn't allow us to read/write system properties
-            // so just generate a random pool number instead
-            ThreadLocalRandom random = ThreadLocalRandom.current();
-            StringBuilder buf = new StringBuilder(prefix);
-
-            for (int i = 0; i < 4; i++) {
-                buf.append(ID_CHARACTERS[random.nextInt(62)]);
-            }
-
-            LOGGER.info("assigned random pool name '{}' (security manager prevented access to system properties)", buf);
-            return buf.toString();
+            // SecurityManager didn't allow incrementing the counter; generate a random number.
+            int randomNum = ThreadLocalRandom.current().nextInt(1, 10000); // Example range
+            LOGGER.info("Assigned random pool name '{}' due to security restrictions.", POOL_NAME_PREFIX + randomNum);
+            return POOL_NAME_PREFIX + randomNum;
         }
     }
 

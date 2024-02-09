@@ -16,7 +16,6 @@ import java.util.Properties;
 public class HikariConfigurationUtil {
 
     public static final String CONFIG_PREFIX = "hibernate.hikari.";
-    public static final String CONFIG_PREFIX_DATASOURCE = "hibernate.hikari.dataSource.";
 
     /**
      * Create/load a HikariConfig from Hibernate properties.
@@ -27,22 +26,22 @@ public class HikariConfigurationUtil {
     @Contract("_ -> new")
     @SuppressWarnings("rawtypes")
     public static @NotNull HikariConfig loadConfiguration(Map props) {
-        Properties hikariProps = new Properties();
-        copyProperty(AvailableSettings.ISOLATION, props, "transactionIsolation", hikariProps);
-        copyProperty(AvailableSettings.AUTOCOMMIT, props, "autoCommit", hikariProps);
-        copyProperty(AvailableSettings.DRIVER, props, "driverClassName", hikariProps);
-        copyProperty(AvailableSettings.URL, props, "jdbcUrl", hikariProps);
-        copyProperty(AvailableSettings.USER, props, "username", hikariProps);
-        copyProperty(AvailableSettings.PASS, props, "password", hikariProps);
+        Properties properties = new Properties();
+        copyProperty(AvailableSettings.ISOLATION, props, "transactionIsolation", properties);
+        copyProperty(AvailableSettings.AUTOCOMMIT, props, "autoCommit", properties);
+        copyProperty(AvailableSettings.DRIVER, props, "driverClassName", properties);
+        copyProperty(AvailableSettings.URL, props, "jdbcUrl", properties);
+        copyProperty(AvailableSettings.USER, props, "username", properties);
+        copyProperty(AvailableSettings.PASS, props, "password", properties);
 
         for (Object keyo : props.keySet()) {
             String key = (String) keyo;
 
             if (key.startsWith(CONFIG_PREFIX)) {
-                hikariProps.setProperty(key.substring(CONFIG_PREFIX.length()), (String) props.get(key));
+                properties.setProperty(key.substring(CONFIG_PREFIX.length()), (String) props.get(key));
             }
         }
-        return new HikariConfig(hikariProps);
+        return new HikariConfig(properties);
     }
 
     @SuppressWarnings("rawtypes")

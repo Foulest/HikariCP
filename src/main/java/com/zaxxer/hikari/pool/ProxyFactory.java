@@ -10,6 +10,7 @@ import java.sql.*;
  *
  * @author Brett Wooldridge
  */
+@SuppressWarnings("unused")
 public final class ProxyFactory {
 
     private ProxyFactory() {
@@ -32,31 +33,37 @@ public final class ProxyFactory {
                                               FastList<Statement> openStatements, ProxyLeakTask leakTask,
                                               long now, boolean isReadOnly, boolean isAutoCommit) {
         // Body is replaced (injected) by JavassistProxyFactory
-        throw new IllegalStateException("You need to run the CLI build and you need target/classes in your classpath to run.");
+        throw new IllegalStateException("You need to run the CLI build and"
+                + " you need target/classes in your classpath to run.");
     }
 
     static Statement getProxyStatement(ProxyConnection connection, Statement statement) {
         // Body is replaced (injected) by JavassistProxyFactory
-        throw new IllegalStateException("You need to run the CLI build and you need target/classes in your classpath to run.");
+        throw new IllegalStateException("You need to run the CLI build and"
+                + " you need target/classes in your classpath to run.");
     }
 
     static CallableStatement getProxyCallableStatement(ProxyConnection connection, CallableStatement statement) {
         // Body is replaced (injected) by JavassistProxyFactory
-        throw new IllegalStateException("You need to run the CLI build and you need target/classes in your classpath to run.");
+        throw new IllegalStateException("You need to run the CLI build and"
+                + " you need target/classes in your classpath to run.");
     }
 
     static PreparedStatement getProxyPreparedStatement(ProxyConnection connection, PreparedStatement statement) {
         // Body is replaced (injected) by JavassistProxyFactory
-        throw new IllegalStateException("You need to run the CLI build and you need target/classes in your classpath to run.");
+        throw new IllegalStateException("You need to run the CLI build and"
+                + " you need target/classes in your classpath to run.");
     }
 
     static ResultSet getProxyResultSet(ProxyConnection connection, ProxyStatement statement, ResultSet resultSet) {
         // Body is replaced (injected) by JavassistProxyFactory
-        throw new IllegalStateException("You need to run the CLI build and you need target/classes in your classpath to run.");
+        throw new IllegalStateException("You need to run the CLI build and"
+                + " you need target/classes in your classpath to run.");
     }
 
     static DatabaseMetaData getProxyDatabaseMetaData(ProxyConnection connection, DatabaseMetaData metaData) {
         // Body is replaced (injected) by JavassistProxyFactory
-        throw new IllegalStateException("You need to run the CLI build and you need target/classes in your classpath to run.");
+        throw new IllegalStateException("You need to run the CLI build and"
+                + " you need target/classes in your classpath to run.");
     }
 }

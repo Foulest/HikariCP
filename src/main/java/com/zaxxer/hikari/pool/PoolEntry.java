@@ -2,6 +2,7 @@ package com.zaxxer.hikari.pool;
 
 import com.zaxxer.hikari.util.ConcurrentBag.IConcurrentBagEntry;
 import com.zaxxer.hikari.util.FastList;
+import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -21,6 +22,7 @@ import static com.zaxxer.hikari.util.ClockSource.*;
  * @author Brett Wooldridge
  */
 @Setter
+@Getter(lombok.AccessLevel.PACKAGE)
 final class PoolEntry implements IConcurrentBagEntry {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PoolEntry.class);
@@ -31,7 +33,8 @@ final class PoolEntry implements IConcurrentBagEntry {
     long lastBorrowed;
 
     private volatile int state = 0;
-    private volatile boolean evict;
+    @lombok.Getter(lombok.AccessLevel.PACKAGE)
+    private volatile boolean markedEvicted;
 
     private volatile ScheduledFuture<?> endOfLife;
     private volatile ScheduledFuture<?> keepalive;
@@ -77,7 +80,8 @@ final class PoolEntry implements IConcurrentBagEntry {
     }
 
     Connection createProxyConnection(ProxyLeakTask leakTask, long now) {
-        return ProxyFactory.getProxyConnection(this, connection, openStatements, leakTask, now, isReadOnly, isAutoCommit);
+        return ProxyFactory.getProxyConnection(this, connection,
+                openStatements, leakTask, now, isReadOnly, isAutoCommit);
     }
 
     void resetConnectionState(ProxyConnection proxyConnection, int dirtyBits) throws SQLException {
@@ -88,12 +92,8 @@ final class PoolEntry implements IConcurrentBagEntry {
         return hikariPool.toString();
     }
 
-    boolean isMarkedEvicted() {
-        return evict;
-    }
-
     void markEvicted() {
-        evict = true;
+        markedEvicted = true;
     }
 
     void evict(String closureReason) {

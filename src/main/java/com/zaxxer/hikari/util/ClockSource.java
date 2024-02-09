@@ -13,6 +13,7 @@ import static java.util.concurrent.TimeUnit.*;
  *
  * @author Brett Wooldridge
  */
+@SuppressWarnings("unused")
 public interface ClockSource {
 
     ClockSource CLOCK = Factory.create();

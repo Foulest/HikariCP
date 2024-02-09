@@ -1,27 +1,25 @@
 package com.zaxxer.hikari.pool;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 /**
  * This is the proxy class for java.sql.ResultSet.
  *
  * @author Brett Wooldridge
  */
+@Getter
+@SuppressWarnings("unused")
+@AllArgsConstructor
 public abstract class ProxyResultSet implements ResultSet {
 
     protected final ProxyConnection connection;
     protected final ProxyStatement statement;
     final ResultSet delegate;
-
-    protected ProxyResultSet(ProxyConnection connection, ProxyStatement statement, ResultSet resultSet) {
-        this.connection = connection;
-        this.statement = statement;
-        delegate = resultSet;
-    }
 
     final SQLException checkException(SQLException ex) {
         return connection.checkException(ex);
@@ -38,14 +36,6 @@ public abstract class ProxyResultSet implements ResultSet {
     // **********************************************************************
     //                 Overridden java.sql.ResultSet Methods
     // **********************************************************************
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Statement getStatement() {
-        return statement;
-    }
 
     /**
      * {@inheritDoc}

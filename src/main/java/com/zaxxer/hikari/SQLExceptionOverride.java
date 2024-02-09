@@ -7,8 +7,8 @@ import java.sql.SQLException;
  * of HikariCP.  By the time an instance of this interface is invoked HikariCP has
  * already made a determination to evict the Connection from the pool.
  * <p>
- * If the {@link #adjudicate(SQLException)} method returns {@link Override#CONTINUE_EVICT} the eviction will occur, but if the
- * method returns {@link Override#DO_NOT_EVICT} the eviction will be elided.
+ * If the {@link #adjudicate(SQLException)} method returns {@link Override#CONTINUE_EVICT} the eviction will occur,
+ * but if the method returns {@link Override#DO_NOT_EVICT} the eviction will be elided.
  */
 public interface SQLExceptionOverride {
 

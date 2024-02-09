@@ -33,14 +33,18 @@ public final class JavassistProxyFactory {
         }
 
         // Cast is not needed for these
-        String methodBody = "{ try { return delegate.method($$); } catch (SQLException e) { throw checkException(e); } }";
+        String methodBody = "{ try { return delegate.method($$); }"
+                + " catch (SQLException e) { throw checkException(e); } }";
+
         generateProxyClass(Connection.class, ProxyConnection.class.getName(), methodBody);
         generateProxyClass(Statement.class, ProxyStatement.class.getName(), methodBody);
         generateProxyClass(ResultSet.class, ProxyResultSet.class.getName(), methodBody);
         generateProxyClass(DatabaseMetaData.class, ProxyDatabaseMetaData.class.getName(), methodBody);
 
         // For these we have to cast the delegate
-        methodBody = "{ try { return ((cast) delegate).method($$); } catch (SQLException e) { throw checkException(e); } }";
+        methodBody = "{ try { return ((cast) delegate).method($$); }"
+                + " catch (SQLException e) { throw checkException(e); } }";
+
         generateProxyClass(PreparedStatement.class, ProxyPreparedStatement.class.getName(), methodBody);
         generateProxyClass(CallableStatement.class, ProxyCallableStatement.class.getName(), methodBody);
 
@@ -209,7 +213,8 @@ public final class JavassistProxyFactory {
 
     private static Class<?> toJavaClass(@NotNull CtClass cls) throws Exception {
         if (cls.getName().endsWith("[]")) {
-            return Array.newInstance(toJavaClass(cls.getName().replace("[]", "")), 0).getClass();
+            return Array.newInstance(toJavaClass(cls.getName()
+                    .replace("[]", "")), 0).getClass();
         } else {
             return toJavaClass(cls.getName());
         }

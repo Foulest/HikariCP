@@ -22,6 +22,7 @@ import static com.zaxxer.hikari.util.ClockSource.currentTime;
  *
  * @author Brett Wooldridge
  */
+@SuppressWarnings({"SqlSourceToSinkFlow", "unused"})
 @Getter(lombok.AccessLevel.PACKAGE)
 public abstract class ProxyConnection implements Connection {
 
@@ -71,6 +72,7 @@ public abstract class ProxyConnection implements Connection {
         ERROR_CODES.add(2399);
     }
 
+    @SuppressWarnings("ClassEscapesDefinedScope")
     protected ProxyConnection(PoolEntry poolEntry,
                               Connection connection,
                               FastList<Statement> openStatements,

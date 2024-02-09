@@ -22,13 +22,14 @@ import static com.zaxxer.hikari.pool.HikariPool.POOL_NORMAL;
  *
  * @author Brett Wooldridge
  */
+@SuppressWarnings("unused")
 public class HikariDataSource extends HikariConfig implements DataSource, Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HikariDataSource.class);
 
     private final AtomicBoolean isShutdown = new AtomicBoolean();
-
     private final HikariPool fastPathPool;
+
     private volatile HikariPool pool;
 
     /**
@@ -85,15 +86,18 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
         }
 
         // See http://en.wikipedia.org/wiki/Double-checked_locking#Usage_in_Java
-        HikariPool result = pool;
-        if (result == null) {
+        HikariPool hikariPool = pool;
+
+        if (hikariPool == null) {
             synchronized (this) {
-                result = pool;
-                if (result == null) {
+                hikariPool = pool;
+
+                if (hikariPool == null) {
                     validate();
                     LOGGER.info("{} - Starting...", getPoolName());
+
                     try {
-                        pool = result = new HikariPool(this);
+                        pool = hikariPool = new HikariPool(this);
                         seal();
                     } catch (PoolInitializationException pie) {
                         if (pie.getCause() instanceof SQLException) {
@@ -102,12 +106,12 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
                             throw pie;
                         }
                     }
+
                     LOGGER.info("{} - Start completed.", getPoolName());
                 }
             }
         }
-
-        return result.getConnection();
+        return hikariPool.getConnection();
     }
 
     /**
@@ -123,8 +127,8 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
      */
     @Override
     public PrintWriter getLogWriter() throws SQLException {
-        HikariPool p = pool;
-        return (p != null ? p.getUnwrappedDataSource().getLogWriter() : null);
+        HikariPool hikariPool = pool;
+        return (hikariPool != null ? hikariPool.getUnwrappedDataSource().getLogWriter() : null);
     }
 
     /**
@@ -132,9 +136,10 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
      */
     @Override
     public void setLogWriter(PrintWriter out) throws SQLException {
-        HikariPool p = pool;
-        if (p != null) {
-            p.getUnwrappedDataSource().setLogWriter(out);
+        HikariPool hikariPool = pool;
+
+        if (hikariPool != null) {
+            hikariPool.getUnwrappedDataSource().setLogWriter(out);
         }
     }
 
@@ -143,9 +148,10 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
      */
     @Override
     public void setLoginTimeout(int seconds) throws SQLException {
-        HikariPool p = pool;
-        if (p != null) {
-            p.getUnwrappedDataSource().setLoginTimeout(seconds);
+        HikariPool hikariPool = pool;
+
+        if (hikariPool != null) {
+            hikariPool.getUnwrappedDataSource().setLoginTimeout(seconds);
         }
     }
 
@@ -154,8 +160,8 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
      */
     @Override
     public int getLoginTimeout() throws SQLException {
-        HikariPool p = pool;
-        return (p != null ? p.getUnwrappedDataSource().getLoginTimeout() : 0);
+        HikariPool hikariPool = pool;
+        return (hikariPool != null ? hikariPool.getUnwrappedDataSource().getLoginTimeout() : 0);
     }
 
     /**
@@ -176,9 +182,11 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
             return (T) this;
         }
 
-        HikariPool p = pool;
-        if (p != null) {
-            DataSource unwrappedDataSource = p.getUnwrappedDataSource();
+        HikariPool hikariPool = pool;
+
+        if (hikariPool != null) {
+            DataSource unwrappedDataSource = hikariPool.getUnwrappedDataSource();
+
             if (iface.isInstance(unwrappedDataSource)) {
                 return (T) unwrappedDataSource;
             }
@@ -187,7 +195,6 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
                 return unwrappedDataSource.unwrap(iface);
             }
         }
-
         throw new SQLException("Wrapped DataSource is not an instance of " + iface);
     }
 
@@ -200,9 +207,11 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
             return true;
         }
 
-        HikariPool p = pool;
-        if (p != null) {
-            DataSource unwrappedDataSource = p.getUnwrappedDataSource();
+        HikariPool hikariPool = pool;
+
+        if (hikariPool != null) {
+            DataSource unwrappedDataSource = hikariPool.getUnwrappedDataSource();
+
             if (iface.isInstance(unwrappedDataSource)) {
                 return true;
             }
@@ -211,7 +220,6 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
                 return unwrappedDataSource.isWrapperFor(iface);
             }
         }
-
         return false;
     }
 
@@ -227,12 +235,13 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
         boolean isAlreadySet = getMetricRegistry() != null;
         super.setMetricRegistry(metricRegistry);
 
-        HikariPool p = pool;
-        if (p != null) {
+        HikariPool hikariPool = pool;
+
+        if (hikariPool != null) {
             if (isAlreadySet) {
                 throw new IllegalStateException("MetricRegistry can only be set one time");
             } else {
-                p.setMetricRegistry(super.getMetricRegistry());
+                hikariPool.setMetricRegistry(super.getMetricRegistry());
             }
         }
     }
@@ -245,12 +254,13 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
         boolean isAlreadySet = getMetricsTrackerFactory() != null;
         super.setMetricsTrackerFactory(metricsTrackerFactory);
 
-        HikariPool p = pool;
-        if (p != null) {
+        HikariPool hikariPool = pool;
+
+        if (hikariPool != null) {
             if (isAlreadySet) {
                 throw new IllegalStateException("MetricsTrackerFactory can only be set one time");
             } else {
-                p.setMetricsTrackerFactory(super.getMetricsTrackerFactory());
+                hikariPool.setMetricsTrackerFactory(super.getMetricsTrackerFactory());
             }
         }
     }
@@ -263,12 +273,13 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
         boolean isAlreadySet = getHealthCheckRegistry() != null;
         super.setHealthCheckRegistry(healthCheckRegistry);
 
-        HikariPool p = pool;
-        if (p != null) {
+        HikariPool hikariPool = pool;
+
+        if (hikariPool != null) {
             if (isAlreadySet) {
                 throw new IllegalStateException("HealthCheckRegistry can only be set one time");
             } else {
-                p.setHealthCheckRegistry(super.getHealthCheckRegistry());
+                hikariPool.setHealthCheckRegistry(super.getHealthCheckRegistry());
             }
         }
     }
@@ -314,9 +325,11 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
      * @param connection the connection to evict from the pool
      */
     public void evictConnection(Connection connection) {
-        HikariPool p;
-        if (!isClosed() && (p = pool) != null && connection.getClass().getName().startsWith("com.zaxxer.hikari")) {
-            p.evictConnection(connection);
+        HikariPool hikariPool;
+
+        if (!isClosed() && (hikariPool = pool) != null
+                && connection.getClass().getName().startsWith("com.zaxxer.hikari")) {
+            hikariPool.evictConnection(connection);
         }
     }
 
@@ -329,14 +342,15 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
             return;
         }
 
-        HikariPool p = pool;
-        if (p != null) {
+        HikariPool hikariPool = pool;
+
+        if (hikariPool != null) {
             try {
                 LOGGER.info("{} - Shutdown initiated...", getPoolName());
-                p.shutdown();
+                hikariPool.shutdown();
                 LOGGER.info("{} - Shutdown completed.", getPoolName());
-            } catch (InterruptedException e) {
-                LOGGER.warn("{} - Interrupted during closing", getPoolName(), e);
+            } catch (InterruptedException ex) {
+                LOGGER.warn("{} - Interrupted during closing", getPoolName(), ex);
                 Thread.currentThread().interrupt();
             }
         }

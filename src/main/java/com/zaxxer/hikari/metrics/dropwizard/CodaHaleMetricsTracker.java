@@ -11,13 +11,6 @@ import java.util.concurrent.TimeUnit;
 @Getter
 public final class CodaHaleMetricsTracker implements IMetricsTracker {
 
-    private final String poolName;
-    private final Timer connectionAcquisitionTimer;
-    private final Histogram connectionDurationHistogram;
-    private final Histogram connectionCreationHistogram;
-    private final Meter connectionTimeoutMeter;
-    private final MetricRegistry registry;
-
     private static final String METRIC_CATEGORY = "pool";
     private static final String METRIC_NAME_WAIT = "Wait";
     private static final String METRIC_NAME_USAGE = "Usage";
@@ -30,11 +23,19 @@ public final class CodaHaleMetricsTracker implements IMetricsTracker {
     private static final String METRIC_NAME_MAX_CONNECTIONS = "MaxConnections";
     private static final String METRIC_NAME_MIN_CONNECTIONS = "MinConnections";
 
+    private final String poolName;
+    private final Timer connectionAcquisitionTimer;
+    private final Histogram connectionDurationHistogram;
+    private final Histogram connectionCreationHistogram;
+    private final Meter connectionTimeoutMeter;
+    private final MetricRegistry registry;
+
     CodaHaleMetricsTracker(String poolName,
                            @NotNull PoolStats poolStats,
                            @NotNull MetricRegistry registry) {
         this.poolName = poolName;
         this.registry = registry;
+
         connectionAcquisitionTimer = registry.timer(MetricRegistry.name(poolName, METRIC_CATEGORY, METRIC_NAME_WAIT));
         connectionDurationHistogram = registry.histogram(MetricRegistry.name(poolName, METRIC_CATEGORY, METRIC_NAME_USAGE));
         connectionCreationHistogram = registry.histogram(MetricRegistry.name(poolName, METRIC_CATEGORY, METRIC_NAME_CONNECT));
@@ -64,16 +65,20 @@ public final class CodaHaleMetricsTracker implements IMetricsTracker {
      */
     @Override
     public void close() {
-        registry.remove(MetricRegistry.name(poolName, METRIC_CATEGORY, METRIC_NAME_WAIT));
-        registry.remove(MetricRegistry.name(poolName, METRIC_CATEGORY, METRIC_NAME_USAGE));
-        registry.remove(MetricRegistry.name(poolName, METRIC_CATEGORY, METRIC_NAME_CONNECT));
-        registry.remove(MetricRegistry.name(poolName, METRIC_CATEGORY, METRIC_NAME_TIMEOUT_RATE));
-        registry.remove(MetricRegistry.name(poolName, METRIC_CATEGORY, METRIC_NAME_TOTAL_CONNECTIONS));
-        registry.remove(MetricRegistry.name(poolName, METRIC_CATEGORY, METRIC_NAME_IDLE_CONNECTIONS));
-        registry.remove(MetricRegistry.name(poolName, METRIC_CATEGORY, METRIC_NAME_ACTIVE_CONNECTIONS));
-        registry.remove(MetricRegistry.name(poolName, METRIC_CATEGORY, METRIC_NAME_PENDING_CONNECTIONS));
-        registry.remove(MetricRegistry.name(poolName, METRIC_CATEGORY, METRIC_NAME_MAX_CONNECTIONS));
-        registry.remove(MetricRegistry.name(poolName, METRIC_CATEGORY, METRIC_NAME_MIN_CONNECTIONS));
+        removeFromRegistry(METRIC_NAME_WAIT, METRIC_NAME_USAGE, METRIC_NAME_CONNECT,
+                METRIC_NAME_TIMEOUT_RATE, METRIC_NAME_TOTAL_CONNECTIONS);
+
+        removeFromRegistry(METRIC_NAME_IDLE_CONNECTIONS, METRIC_NAME_ACTIVE_CONNECTIONS,
+                METRIC_NAME_PENDING_CONNECTIONS, METRIC_NAME_MAX_CONNECTIONS, METRIC_NAME_MIN_CONNECTIONS);
+    }
+
+    private void removeFromRegistry(String metricNameWait, String metricNameUsage, String metricNameConnect,
+                                    String metricNameTimeoutRate, String metricNameTotalConnections) {
+        registry.remove(MetricRegistry.name(poolName, METRIC_CATEGORY, metricNameWait));
+        registry.remove(MetricRegistry.name(poolName, METRIC_CATEGORY, metricNameUsage));
+        registry.remove(MetricRegistry.name(poolName, METRIC_CATEGORY, metricNameConnect));
+        registry.remove(MetricRegistry.name(poolName, METRIC_CATEGORY, metricNameTimeoutRate));
+        registry.remove(MetricRegistry.name(poolName, METRIC_CATEGORY, metricNameTotalConnections));
     }
 
     /**

@@ -16,11 +16,13 @@ import java.util.function.UnaryOperator;
  *
  * @author Brett Wooldridge
  */
+@SuppressWarnings({"unused", "unchecked"})
 public final class FastList<T> implements List<T>, RandomAccess, Serializable {
 
     private static final long serialVersionUID = -4598088075242913858L;
 
     private final Class<?> clazz;
+
     private T[] elementData;
     private int size;
 
@@ -29,7 +31,6 @@ public final class FastList<T> implements List<T>, RandomAccess, Serializable {
      *
      * @param clazz the Class stored in the collection
      */
-    @SuppressWarnings("unchecked")
     public FastList(Class<?> clazz) {
         elementData = (T[]) Array.newInstance(clazz, 32);
         this.clazz = clazz;
@@ -41,7 +42,6 @@ public final class FastList<T> implements List<T>, RandomAccess, Serializable {
      * @param clazz    the Class stored in the collection
      * @param capacity the initial size of the FastList
      */
-    @SuppressWarnings("unchecked")
     public FastList(Class<?> clazz, int capacity) {
         elementData = (T[]) Array.newInstance(clazz, capacity);
         this.clazz = clazz;
@@ -53,7 +53,6 @@ public final class FastList<T> implements List<T>, RandomAccess, Serializable {
      * @param element the element to add
      */
     @Override
-    @SuppressWarnings("unchecked")
     public boolean add(T element) {
         if (size < elementData.length) {
             elementData[size++] = element;

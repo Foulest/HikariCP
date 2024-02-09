@@ -5,6 +5,7 @@ package com.zaxxer.hikari;
  *
  * @author Brett Wooldridge
  */
+@SuppressWarnings("unused")
 public interface HikariConfigMXBean {
 
     /**

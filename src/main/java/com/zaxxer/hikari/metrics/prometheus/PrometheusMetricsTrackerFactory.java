@@ -24,12 +24,12 @@ import static com.zaxxer.hikari.metrics.prometheus.PrometheusMetricsTrackerFacto
  * Note: the internal {@see io.prometheus.client.Summary} requires heavy locks. Consider using
  * {@see PrometheusHistogramMetricsTrackerFactory} if performance plays a role and you don't need the summary per se.
  */
+@SuppressWarnings("unused")
 public class PrometheusMetricsTrackerFactory implements MetricsTrackerFactory {
 
     private final static Map<CollectorRegistry, RegistrationStatus> registrationStatuses = new ConcurrentHashMap<>();
 
     private final HikariCPCollector collector = new HikariCPCollector();
-
     private final CollectorRegistry collectorRegistry;
 
     enum RegistrationStatus {

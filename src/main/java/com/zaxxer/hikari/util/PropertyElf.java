@@ -127,7 +127,8 @@ public final class PropertyElf {
             } else {
                 try {
                     logger.debug("Try to create a new instance of \"{}\"", propValue);
-                    writeMethod.invoke(target, Class.forName(propValue.toString()).getDeclaredConstructor().newInstance());
+                    writeMethod.invoke(target, Class.forName(propValue.toString())
+                            .getDeclaredConstructor().newInstance());
                 } catch (InstantiationException | ClassNotFoundException ex) {
                     logger.debug("Class \"{}\" not found or could not instantiate it (Default constructor)", propValue);
                     writeMethod.invoke(target, propValue);

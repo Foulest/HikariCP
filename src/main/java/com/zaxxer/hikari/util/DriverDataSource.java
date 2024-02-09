@@ -19,6 +19,7 @@ public final class DriverDataSource implements DataSource {
 
     private final String jdbcUrl;
     private final Properties driverProperties;
+
     private Driver driver;
 
     public DriverDataSource(String jdbcUrl, String driverClassName,
@@ -95,9 +96,11 @@ public final class DriverDataSource implements DataSource {
         try {
             if (driver == null) {
                 driver = DriverManager.getDriver(jdbcUrl);
-                LOGGER.debug("Loaded driver with class name {} for jdbcUrl={}", driver.getClass().getName(), sanitizedUrl);
+                LOGGER.debug("Loaded driver with class name {} for jdbcUrl={}",
+                        driver.getClass().getName(), sanitizedUrl);
             } else if (!driver.acceptsURL(jdbcUrl)) {
-                throw new RuntimeException("Driver " + driverClassName + " claims to not accept jdbcUrl, " + sanitizedUrl);
+                throw new RuntimeException("Driver " + driverClassName
+                        + " claims to not accept jdbcUrl, " + sanitizedUrl);
             }
         } catch (SQLException ex) {
             throw new RuntimeException("Failed to get driver instance for jdbcUrl=" + sanitizedUrl, ex);

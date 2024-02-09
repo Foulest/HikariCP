@@ -6,6 +6,7 @@ import com.codahale.metrics.health.HealthCheck;
 import com.codahale.metrics.health.HealthCheckRegistry;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.pool.HikariPool;
+import lombok.AllArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Connection;
@@ -21,7 +22,7 @@ import java.util.concurrent.TimeUnit;
  *   <li>Connection99Percent</li>
  * </ul>
  * The ConnectivityCheck will use the <code>connectionTimeout</code>, unless the health check property
- * <code>connectivityCheckTimeoutMs</code> is defined.  However, if either the <code>connectionTimeout</code>
+ * <code>connectivityCheckTimeoutMs</code> is defined. However, if either the <code>connectionTimeout</code>
  * or the <code>connectivityCheckTimeoutMs</code> is 0 (infinite), a timeout of 10 seconds will be used.
  * <p>
  * The Connection99Percent health check will only be registered if the health check property
@@ -88,21 +89,17 @@ public final class CodahaleHealthChecker {
         protected Result check() {
             try (Connection ignored = pool.getConnection(checkTimeoutMs)) {
                 return Result.healthy();
-            } catch (SQLException e) {
-                return Result.unhealthy(e);
+            } catch (SQLException ex) {
+                return Result.unhealthy(ex);
             }
         }
     }
 
+    @AllArgsConstructor
     private static class Connection99Percent extends HealthCheck {
 
         private final Timer waitTimer;
         private final long expected99thPercentile;
-
-        Connection99Percent(Timer waitTimer, long expected99thPercentile) {
-            this.waitTimer = waitTimer;
-            this.expected99thPercentile = expected99thPercentile;
-        }
 
         /**
          * {@inheritDoc}
