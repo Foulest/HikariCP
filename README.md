@@ -18,7 +18,7 @@ All credit for the original project goes to the
 
 - All the features of the original HikariCP project *(version 4.0.3)*
 - Re-coded the entire project to be more efficient and easier to maintain
-- Updated outdated and vulnerable dependencies
+- Updated outdated and [vulnerable dependencies](https://mvnrepository.com/artifact/com.zaxxer/HikariCP/4.0.3)
 - Lombok has been implemented to reduce boilerplate code
 - Migrated from using Maven to Gradle
 
