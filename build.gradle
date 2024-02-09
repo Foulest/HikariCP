@@ -23,33 +23,40 @@ repositories {
 }
 
 dependencies {
-    // Javassist - for bytecode manipulation
-    // https://mvnrepository.com/artifact/org.javassist/javassist
-    compileOnly group: 'org.javassist', name: 'javassist', version: '3.30.2-GA'
-
-    // Prometheus Simpleclient - for metrics
-    // https://mvnrepository.com/artifact/io.prometheus/simpleclient
-    compileOnly group: 'io.prometheus', name: 'simpleclient', version: '0.16.0'
-
     // Micrometer Core - for metrics
+    // Updated from version 1.5.10 to 1.12.2
     // https://mvnrepository.com/artifact/io.micrometer/micrometer-core
     compileOnly group: 'io.micrometer', name: 'micrometer-core', version: '1.12.2'
 
-    // Hibernate Core - for database connections
-    // https://mvnrepository.com/artifact/org.hibernate/hibernate-core
-    compileOnly group: 'org.hibernate', name: 'hibernate-core', version: '5.6.15.Final'
+    // Javassist - for bytecode manipulation
+    // Updated from version 3.27.0-GA to 3.30.2-GA
+    // https://mvnrepository.com/artifact/org.javassist/javassist
+    compileOnly group: 'org.javassist', name: 'javassist', version: '3.30.2-GA'
+
+    // SLF4J API - for logging
+    // Updated from version 1.7.30 to 2.0.12
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
+    compileOnly group: 'org.slf4j', name: 'slf4j-api', version: '2.0.12'
 
     // Metrics Core - for metrics
+    // Updated from version 3.2.5 to 4.2.25
     // https://mvnrepository.com/artifact/io.dropwizard.metrics/metrics-core
     compileOnly group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.25'
 
     // Metrics Health Checks - for health checks
+    // Updated from version 3.2.5 to 4.2.25
     // https://mvnrepository.com/artifact/io.dropwizard.metrics/metrics-healthchecks
     compileOnly group: 'io.dropwizard.metrics', name: 'metrics-healthchecks', version: '4.2.25'
 
-    // SLF4J API - for logging
-    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
-    compileOnly group: 'org.slf4j', name: 'slf4j-api', version: '2.0.12'
+    // Prometheus Simpleclient - for metrics
+    // Updated from version 0.9.0 to 0.16.0
+    // https://mvnrepository.com/artifact/io.prometheus/simpleclient
+    compileOnly group: 'io.prometheus', name: 'simpleclient', version: '0.16.0'
+
+    // Hibernate Core - for database connections
+    // Updated from version 5.4.16.Final to 5.6.15.Final
+    // https://mvnrepository.com/artifact/org.hibernate/hibernate-core
+    compileOnly group: 'org.hibernate', name: 'hibernate-core', version: '5.6.15.Final'
 
     // JetBrains Annotations - for code inspection and documentation
     // https://mvnrepository.com/artifact/org.jetbrains/annotations
