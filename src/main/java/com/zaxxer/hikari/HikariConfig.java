@@ -692,13 +692,12 @@ public class HikariConfig implements HikariConfigMXBean {
     }
 
     private long validateLeakDetectionThreshold() {
-        if (leakDetectionThreshold > 0 && !UNIT_TEST) {
-            if (leakDetectionThreshold < MIN_LEAK_DETECTION_THRESHOLD
-                    || (leakDetectionThreshold > maxLifetime && maxLifetime > 0)) {
-                LOGGER.warn("{} - leakDetectionThreshold is less than {}ms or more than maxLifetime,"
-                        + " disabling it.", poolName, MIN_LEAK_DETECTION_THRESHOLD);
-                return 0;
-            }
+        if (leakDetectionThreshold > 0 && !UNIT_TEST
+                && (leakDetectionThreshold < MIN_LEAK_DETECTION_THRESHOLD
+                || (leakDetectionThreshold > maxLifetime && maxLifetime > 0))) {
+            LOGGER.warn("{} - leakDetectionThreshold is less than {}ms or more than maxLifetime,"
+                    + " disabling it.", poolName, MIN_LEAK_DETECTION_THRESHOLD);
+            return 0;
         }
         return leakDetectionThreshold;
     }
