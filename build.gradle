@@ -26,7 +26,7 @@ dependencies {
     // Micrometer Core - for metrics
     // Updated from version 1.5.10 to 1.12.2
     // https://mvnrepository.com/artifact/io.micrometer/micrometer-core
-    compileOnly group: 'io.micrometer', name: 'micrometer-core', version: '1.12.2'
+    compileOnly group: 'io.micrometer', name: 'micrometer-core', version: '1.12.3'
 
     // Javassist - for bytecode manipulation
     // Updated from version 3.27.0-GA to 3.30.2-GA
