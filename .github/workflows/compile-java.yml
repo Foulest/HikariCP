@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  compile-java:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout Repository'
@@ -21,6 +21,8 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
+      - name: 'Make Gradlew executable'
+        run: chmod +x ./gradlew
       - name: 'Compile Java code'
         run: |
           ./gradlew compileJava
