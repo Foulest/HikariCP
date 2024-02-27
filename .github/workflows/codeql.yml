@@ -19,13 +19,13 @@ on:
     - cron: '0 8 * * 1'
 
 jobs:
-  codeql-analysis:
+  codeql:
     permissions:
       actions: read
       contents: read
       security-events: write
 
-    name: 'CodeQL Analysis'
+    name: 'CodeQL'
     runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
     timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
 
