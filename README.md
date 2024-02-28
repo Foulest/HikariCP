@@ -1,8 +1,8 @@
 # HikariCP
 
 [![License: Apache v2](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/license/apache-2-0)
+[![CodeQL Badge](https://github.com/Foulest/HikariCP/actions/workflows/codeql.yml/badge.svg)](https://github.com/Foulest/HikariCP/actions/workflows/codeql.yml)
 [![JitPack Badge](https://jitpack.io/v/Foulest/HikariCP.svg)](https://jitpack.io/#Foulest/HikariCP)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/58f57090224543b8a11e833059066852)](https://app.codacy.com/gh/Foulest/HikariCP/dashboard)
 
 **HikariCP** is a lightweight, high-performance JDBC connection pool.
 
