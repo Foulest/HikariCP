@@ -26,9 +26,6 @@ jobs:
       - name: 'Checkout Repository'
         uses: actions/checkout@v4
 
-      - name: 'Build Repository'
-        uses: github/codeql-action/autobuild@v3
-
       - name: 'Run DevSkim Analysis'
         uses: microsoft/DevSkim-Action@v1.0.11
 
