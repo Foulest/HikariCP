@@ -3,12 +3,7 @@
 #
 # You may wish to alter this file to override the set of languages analyzed,
 # or to provide custom queries or build logic.
-#
-# ******** NOTE ********
-# We have attempted to detect the languages in your repository. Please check
-# the `language` matrix defined below to confirm you have the correct set of
-# supported CodeQL languages.
-name: CodeQL
+name: 'CodeQL'
 
 on:
   push:
@@ -24,29 +19,24 @@ jobs:
       actions: read
       contents: read
       security-events: write
+      statuses: write
 
     name: 'CodeQL'
-    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
-    timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ 'java-kotlin' ]
+    runs-on: ubuntu-latest
 
     steps:
-    - name: 'Checkout Repository'
-      uses: actions/checkout@v4
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v4
 
-    - name: 'Initialize CodeQL'
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
+      - name: 'Initialize CodeQL'
+        uses: github/codeql-action/init@v3
+        with:
+          languages: 'java-kotlin'
 
-    - name: 'Autobuild'
-      uses: github/codeql-action/autobuild@v3
+      - name: 'Build Repository'
+        uses: github/codeql-action/autobuild@v3
 
-    - name: 'Run CodeQL Analysis'
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:${{matrix.language}}"
+      - name: 'Run CodeQL Analysis'
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:java-kotlin"

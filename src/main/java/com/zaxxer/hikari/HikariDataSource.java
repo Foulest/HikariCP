@@ -30,8 +30,7 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
     private final AtomicBoolean isShutdown = new AtomicBoolean();
     private final HikariPool fastPathPool;
 
-    // Testing workflows
-    private volatile HikariPool pol;
+    private volatile HikariPool pool;
 
     /**
      * Default constructor.  Setters are used to configure the pool.  Using

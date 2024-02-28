@@ -1,7 +1,7 @@
 # This workflow uses actions that are not certified by GitHub.
 # They are provided by a third-party and are governed by separate
 # terms of service, privacy policy, and support documentation.
-name: DevSkim
+name: 'DevSkim'
 
 on:
   push:
@@ -17,6 +17,7 @@ jobs:
       actions: read
       contents: read
       security-events: write
+      statuses: write
 
     name: 'DevSkim'
     runs-on: ubuntu-latest
@@ -25,8 +26,11 @@ jobs:
       - name: 'Checkout Repository'
         uses: actions/checkout@v4
 
+      - name: 'Build Repository'
+        uses: github/codeql-action/autobuild@v3
+
       - name: 'Run DevSkim Analysis'
-        uses: microsoft/DevSkim-Action@v1
+        uses: microsoft/DevSkim-Action@v1.0.11
 
       - name: 'Upload DevSkim Results'
         uses: github/codeql-action/upload-sarif@v3
