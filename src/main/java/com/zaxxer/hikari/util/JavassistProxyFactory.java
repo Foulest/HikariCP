@@ -3,6 +3,7 @@ package com.zaxxer.hikari.util;
 import com.zaxxer.hikari.pool.*;
 import javassist.*;
 import javassist.bytecode.ClassFile;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -18,6 +19,7 @@ import java.util.*;
  *
  * @author Brett Wooldridge
  */
+@Slf4j
 public final class JavassistProxyFactory {
 
     private static ClassPool classPool;
@@ -52,7 +54,7 @@ public final class JavassistProxyFactory {
     }
 
     private static void modifyProxyFactory() throws NotFoundException, CannotCompileException, IOException {
-        System.out.println("Generating method bodies for com.zaxxer.hikari.proxy.ProxyFactory");
+        log.debug("Generating method bodies for com.zaxxer.hikari.proxy.ProxyFactory");
 
         String packageName = ProxyConnection.class.getPackage().getName();
         CtClass proxyCt = classPool.getCtClass("com.zaxxer.hikari.pool.ProxyFactory");
@@ -97,7 +99,7 @@ public final class JavassistProxyFactory {
         CtClass targetCt = classPool.makeClass(newClassName, superCt);
         targetCt.setModifiers(Modifier.setPublic(Modifier.FINAL));
 
-        System.out.println("Generating " + newClassName);
+        log.debug("Generating " + newClassName);
 
         // Make a set of method signatures we inherit implementation for, so we don't generate delegates for these
         Set<String> superSigs = new HashSet<>();

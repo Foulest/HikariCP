@@ -4,9 +4,8 @@ import com.zaxxer.hikari.util.ConcurrentBag.IConcurrentBagEntry;
 import com.zaxxer.hikari.util.FastList;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -21,11 +20,11 @@ import static com.zaxxer.hikari.util.ClockSource.*;
  *
  * @author Brett Wooldridge
  */
+@Slf4j
 @Setter
 @Getter(lombok.AccessLevel.PACKAGE)
 final class PoolEntry implements IConcurrentBagEntry {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PoolEntry.class);
     private static final AtomicIntegerFieldUpdater<PoolEntry> stateUpdater;
 
     Connection connection;
@@ -116,8 +115,7 @@ final class PoolEntry implements IConcurrentBagEntry {
      */
     @Override
     public @NotNull String toString() {
-        long now = currentTime();
-        return connection + ", accessed " + elapsedDisplayString(lastAccessed, now) + " ago, " + stateToString();
+        return connection + ", accessed " + elapsedDisplayString(lastAccessed, currentTime()) + " ago, " + stateToString();
     }
 
     // ***********************************************************************
@@ -152,14 +150,14 @@ final class PoolEntry implements IConcurrentBagEntry {
         ScheduledFuture<?> eol = endOfLife;
 
         if (eol != null && !eol.isDone() && !eol.cancel(false)) {
-            LOGGER.warn("{} - maxLifeTime expiration task cancellation unexpectedly"
+            log.warn("{} - maxLifeTime expiration task cancellation unexpectedly"
                     + " returned false for connection {}", getPoolName(), connection);
         }
 
         ScheduledFuture<?> ka = keepalive;
 
         if (ka != null && !ka.isDone() && !ka.cancel(false)) {
-            LOGGER.warn("{} - keepalive task cancellation unexpectedly returned"
+            log.warn("{} - keepalive task cancellation unexpectedly returned"
                     + " false for connection {}", getPoolName(), connection);
         }
 

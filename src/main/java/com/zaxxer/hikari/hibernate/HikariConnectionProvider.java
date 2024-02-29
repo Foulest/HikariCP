@@ -2,6 +2,7 @@ package com.zaxxer.hikari.hibernate;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.HibernateException;
 import org.hibernate.Version;
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
@@ -9,8 +10,6 @@ import org.hibernate.service.UnknownUnwrapTypeException;
 import org.hibernate.service.spi.Configurable;
 import org.hibernate.service.spi.Stoppable;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -22,10 +21,10 @@ import java.util.Map;
  *
  * @author Brett Wooldridge, Luca Burgazzoli
  */
+@Slf4j
 @SuppressWarnings("unused")
 public class HikariConnectionProvider implements ConnectionProvider, Configurable, Stoppable {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(HikariConnectionProvider.class);
     private static final long serialVersionUID = -9131625057941275711L;
 
     private HikariConfig config;
@@ -36,7 +35,7 @@ public class HikariConnectionProvider implements ConnectionProvider, Configurabl
         dataSource = null;
 
         if (Version.getVersionString().substring(0, 5).compareTo("4.3.6") >= 1) {
-            LOGGER.warn("com.zaxxer.hikari.hibernate.HikariConnectionProvider has"
+            log.warn("com.zaxxer.hikari.hibernate.HikariConnectionProvider has"
                     + " been deprecated for versions of Hibernate 4.3.6 and newer."
                     + " Please switch to org.hibernate.hikaricp.internal.HikariCPConnectionProvider.");
         }
@@ -49,13 +48,13 @@ public class HikariConnectionProvider implements ConnectionProvider, Configurabl
     @Override
     public void configure(@NotNull Map props) throws HibernateException {
         try {
-            LOGGER.debug("Configuring HikariCP");
+            log.debug("Configuring HikariCP");
             config = HikariConfigurationUtil.loadConfiguration(props);
             dataSource = new HikariDataSource(config);
         } catch (Exception ex) {
             throw new HibernateException(ex);
         }
-        LOGGER.debug("HikariCP Configured");
+        log.debug("HikariCP Configured");
     }
 
     // *************************************************************************

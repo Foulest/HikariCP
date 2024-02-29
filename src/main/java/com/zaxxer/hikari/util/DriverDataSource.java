@@ -1,8 +1,7 @@
 package com.zaxxer.hikari.util;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.io.PrintWriter;
@@ -11,9 +10,9 @@ import java.util.Enumeration;
 import java.util.Map.Entry;
 import java.util.Properties;
 
+@Slf4j
 public final class DriverDataSource implements DataSource {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DriverDataSource.class);
     private static final String PASSWORD = "password";
     private static final String USER = "user";
 
@@ -52,7 +51,7 @@ public final class DriverDataSource implements DataSource {
             }
 
             if (driver == null) {
-                LOGGER.warn("Registered driver with driverClassName={} was not found,"
+                log.warn("Registered driver with driverClassName={} was not found,"
                         + " trying direct instantiation.", driverClassName);
 
                 Class<?> driverClass = null;
@@ -62,10 +61,10 @@ public final class DriverDataSource implements DataSource {
                     if (threadContextClassLoader != null) {
                         try {
                             driverClass = threadContextClassLoader.loadClass(driverClassName);
-                            LOGGER.debug("Driver class {} found in Thread context class loader {}",
+                            log.debug("Driver class {} found in Thread context class loader {}",
                                     driverClassName, threadContextClassLoader);
                         } catch (ClassNotFoundException ex) {
-                            LOGGER.debug("Driver class {} not found in Thread"
+                            log.debug("Driver class {} not found in Thread"
                                             + " context class loader {}, trying classloader {}",
                                     driverClassName, threadContextClassLoader, getClass().getClassLoader());
                         }
@@ -73,11 +72,11 @@ public final class DriverDataSource implements DataSource {
 
                     if (driverClass == null) {
                         driverClass = getClass().getClassLoader().loadClass(driverClassName);
-                        LOGGER.debug("Driver class {} found in the HikariConfig class classloader {}",
+                        log.debug("Driver class {} found in the HikariConfig class classloader {}",
                                 driverClassName, getClass().getClassLoader());
                     }
                 } catch (ClassNotFoundException ex) {
-                    LOGGER.debug("Failed to load driver class {} from HikariConfig class classloader {}",
+                    log.debug("Failed to load driver class {} from HikariConfig class classloader {}",
                             driverClassName, getClass().getClassLoader());
                 }
 
@@ -85,7 +84,7 @@ public final class DriverDataSource implements DataSource {
                     try {
                         driver = (Driver) driverClass.getDeclaredConstructor().newInstance();
                     } catch (Exception ex) {
-                        LOGGER.warn("Failed to create instance of driver class {},"
+                        log.warn("Failed to create instance of driver class {},"
                                 + " trying jdbcUrl resolution", driverClassName, ex);
                     }
                 }
@@ -96,7 +95,7 @@ public final class DriverDataSource implements DataSource {
         try {
             if (driver == null) {
                 driver = DriverManager.getDriver(jdbcUrl);
-                LOGGER.debug("Loaded driver with class name {} for jdbcUrl={}",
+                log.debug("Loaded driver with class name {} for jdbcUrl={}",
                         driver.getClass().getName(), sanitizedUrl);
             } else if (!driver.acceptsURL(jdbcUrl)) {
                 throw new RuntimeException("Driver " + driverClassName

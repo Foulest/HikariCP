@@ -5,10 +5,9 @@ import com.zaxxer.hikari.metrics.MetricsTrackerFactory;
 import com.zaxxer.hikari.util.PropertyElf;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -35,12 +34,12 @@ import static com.zaxxer.hikari.util.UtilityElf.safeIsAssignableFrom;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+@Slf4j
 @Getter
 @Setter
 @SuppressWarnings({"SameParameterValue", "unused"})
 public class HikariConfig implements HikariConfigMXBean {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(HikariConfig.class);
     private static final char[] ID_CHARACTERS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray();
     private static final long CONNECTION_TIMEOUT = SECONDS.toMillis(30);
     private static final long VALIDATION_TIMEOUT = SECONDS.toMillis(5);
@@ -55,7 +54,6 @@ public class HikariConfig implements HikariConfigMXBean {
     private static final int MINIMUM_POOL_SIZE = 1;
     private static final String POOL_NAME_PREFIX = "HikariPool-";
     private static final AtomicInteger POOL_NUMBER = new AtomicInteger(0);
-    private static final Object POOL_NUMBER_LOCK = new Object();
     private static final boolean UNIT_TEST = false;
 
     // Properties changeable at runtime through the HikariConfigMXBean
@@ -288,11 +286,11 @@ public class HikariConfig implements HikariConfigMXBean {
         try {
             if (driverClass == null) {
                 driverClass = getClass().getClassLoader().loadClass(driverClassName);
-                LOGGER.debug("Driver class {} found in the HikariConfig class classloader {}",
+                log.debug("Driver class {} found in the HikariConfig class classloader {}",
                         driverClassName, getClass().getClassLoader());
             }
         } catch (ClassNotFoundException ex) {
-            LOGGER.error("Failed to load driver class {} from HikariConfig class classloader {}",
+            log.error("Failed to load driver class {} from HikariConfig class classloader {}",
                     driverClassName, getClass().getClassLoader());
         }
 
@@ -510,11 +508,11 @@ public class HikariConfig implements HikariConfigMXBean {
         try {
             if (overrideClass == null) {
                 overrideClass = getClass().getClassLoader().loadClass(exceptionOverrideClassName);
-                LOGGER.debug("SQLExceptionOverride class {} found in the HikariConfig class classloader {}",
+                log.debug("SQLExceptionOverride class {} found in the HikariConfig class classloader {}",
                         exceptionOverrideClassName, getClass().getClassLoader());
             }
         } catch (ClassNotFoundException ex) {
-            LOGGER.error("Failed to load SQLExceptionOverride class {} from HikariConfig class classloader {}",
+            log.error("Failed to load SQLExceptionOverride class {} from HikariConfig class classloader {}",
                     exceptionOverrideClassName, getClass().getClassLoader());
         }
 
@@ -588,11 +586,11 @@ public class HikariConfig implements HikariConfigMXBean {
         if (threadContextClassLoader != null) {
             try {
                 Class<?> driverClass = threadContextClassLoader.loadClass(driverClassName);
-                LOGGER.debug("Driver class {} found in Thread context class loader {}",
+                log.debug("Driver class {} found in Thread context class loader {}",
                         driverClassName, threadContextClassLoader);
                 return driverClass;
             } catch (ClassNotFoundException ex) {
-                LOGGER.debug("Driver class {} not found in Thread context class loader {}, trying classloader {}",
+                log.debug("Driver class {} not found in Thread context class loader {}, trying classloader {}",
                         driverClassName, threadContextClassLoader, getClass().getClassLoader());
             }
         }
@@ -621,30 +619,30 @@ public class HikariConfig implements HikariConfigMXBean {
         // Check Data Source Options
         if (dataSource != null) {
             if (dataSourceClassName != null) {
-                LOGGER.warn("{} - using dataSource and ignoring dataSourceClassName.", poolName);
+                log.warn("{} - using dataSource and ignoring dataSourceClassName.", poolName);
             }
         } else if (dataSourceClassName != null) {
             if (driverClassName != null) {
-                LOGGER.error("{} - cannot use driverClassName and dataSourceClassName together.", poolName);
+                log.error("{} - cannot use driverClassName and dataSourceClassName together.", poolName);
                 // NOTE: This exception text is referenced by a Spring Boot FailureAnalyzer, it should not be
                 // changed without first notifying the Spring Boot developers.
                 throw new IllegalStateException("cannot use driverClassName and dataSourceClassName together.");
             } else if (jdbcUrl != null) {
-                LOGGER.warn("{} - using dataSourceClassName and ignoring jdbcUrl.", poolName);
+                log.warn("{} - using dataSourceClassName and ignoring jdbcUrl.", poolName);
             }
         } else if (jdbcUrl != null || dataSourceJNDI != null) {
             // ok
         } else if (driverClassName != null) {
-            LOGGER.error("{} - jdbcUrl is required with driverClassName.", poolName);
+            log.error("{} - jdbcUrl is required with driverClassName.", poolName);
             throw new IllegalArgumentException("jdbcUrl is required with driverClassName.");
         } else {
-            LOGGER.error("{} - dataSource or dataSourceClassName or jdbcUrl is required.", poolName);
+            log.error("{} - dataSource or dataSourceClassName or jdbcUrl is required.", poolName);
             throw new IllegalArgumentException("dataSource or dataSourceClassName or jdbcUrl is required.");
         }
 
         validateNumerics();
 
-        if (LOGGER.isDebugEnabled() || UNIT_TEST) {
+        if (log.isDebugEnabled() || UNIT_TEST) {
             logConfiguration();
         }
     }
@@ -672,7 +670,7 @@ public class HikariConfig implements HikariConfigMXBean {
     private long validateValue(String propertyName, long currentValue,
                                long defaultValue, long minValue, boolean useDefault) {
         if (currentValue != 0 && currentValue < minValue) {
-            LOGGER.warn("{} - {} is less than {}ms, setting to {}ms.", poolName, propertyName, minValue, defaultValue);
+            log.warn("{} - {} is less than {}ms, setting to {}ms.", poolName, propertyName, minValue, defaultValue);
             return useDefault ? defaultValue : minValue;
         }
         return currentValue;
@@ -680,12 +678,12 @@ public class HikariConfig implements HikariConfigMXBean {
 
     private long validateKeepaliveTime() {
         if (keepaliveTime != 0 && keepaliveTime < MIN_KEEPALIVE_TIME) {
-            LOGGER.warn("{} - keepaliveTime is less than {}ms, disabling it.", poolName, MIN_KEEPALIVE_TIME);
+            log.warn("{} - keepaliveTime is less than {}ms, disabling it.", poolName, MIN_KEEPALIVE_TIME);
             return DEFAULT_KEEPALIVE_TIME;
         }
 
         if (keepaliveTime != 0 && maxLifetime != 0 && keepaliveTime >= maxLifetime) {
-            LOGGER.warn("{} - keepaliveTime is greater than or equal to maxLifetime, disabling it.", poolName);
+            log.warn("{} - keepaliveTime is greater than or equal to maxLifetime, disabling it.", poolName);
             return DEFAULT_KEEPALIVE_TIME;
         }
         return keepaliveTime;
@@ -695,7 +693,7 @@ public class HikariConfig implements HikariConfigMXBean {
         if (leakDetectionThreshold > 0 && !UNIT_TEST
                 && (leakDetectionThreshold < MIN_LEAK_DETECTION_THRESHOLD
                 || (leakDetectionThreshold > maxLifetime && maxLifetime > 0))) {
-            LOGGER.warn("{} - leakDetectionThreshold is less than {}ms or more than maxLifetime,"
+            log.warn("{} - leakDetectionThreshold is less than {}ms or more than maxLifetime,"
                     + " disabling it.", poolName, MIN_LEAK_DETECTION_THRESHOLD);
             return 0;
         }
@@ -712,13 +710,13 @@ public class HikariConfig implements HikariConfigMXBean {
     private long validateIdleTimeout() {
         if (idleTimeout + SECONDS.toMillis(1) > maxLifetime
                 && maxLifetime > 0 && minimumIdle < maximumPoolSize) {
-            LOGGER.warn("{} - idleTimeout is close to or more than maxLifetime, disabling it.", poolName);
+            log.warn("{} - idleTimeout is close to or more than maxLifetime, disabling it.", poolName);
             return 0;
         } else if (idleTimeout != 0 && idleTimeout < SECONDS.toMillis(10) && minimumIdle < maximumPoolSize) {
-            LOGGER.warn("{} - idleTimeout is less than 10000ms, setting to default {}ms.", poolName, IDLE_TIMEOUT);
+            log.warn("{} - idleTimeout is less than 10000ms, setting to default {}ms.", poolName, IDLE_TIMEOUT);
             return IDLE_TIMEOUT;
         } else if (idleTimeout != IDLE_TIMEOUT && idleTimeout != 0 && minimumIdle == maximumPoolSize) {
-            LOGGER.warn("{} - idleTimeout has been set but has no effect because"
+            log.warn("{} - idleTimeout has been set but has no effect because"
                     + " the pool is operating as a fixed size pool.", poolName);
         }
         return idleTimeout;
@@ -732,18 +730,18 @@ public class HikariConfig implements HikariConfigMXBean {
     }
 
     private void logConfiguration() {
-        if (!LOGGER.isDebugEnabled()) {
+        if (!log.isDebugEnabled()) {
             return; // Skip processing if debug logging is not enabled
         }
 
-        LOGGER.debug("{} - configuration:", poolName);
+        log.debug("{} - configuration:", poolName);
         Set<String> propertyNames = new TreeSet<>(PropertyElf.getPropertyNames(HikariConfig.class));
 
         for (String prop : propertyNames) {
             try {
                 Object value = getMaskedPropertyValue(prop);
                 String formattedProp = String.format("%-32s", prop); // Ensure left-aligned & padded to 32 characters
-                LOGGER.debug("{}{}", formattedProp, value);
+                log.debug("{}{}", formattedProp, value);
             } catch (Exception ignored) {
             }
         }
@@ -813,16 +811,11 @@ public class HikariConfig implements HikariConfigMXBean {
 
     private @NotNull String generatePoolName() {
         try {
-            int nextNum;
-            synchronized (POOL_NUMBER_LOCK) {
-                // No need to interact with System properties; use an AtomicInteger instead.
-                nextNum = POOL_NUMBER.incrementAndGet();
-            }
+            int nextNum = POOL_NUMBER.incrementAndGet();
             return POOL_NAME_PREFIX + nextNum;
         } catch (AccessControlException ex) {
-            // SecurityManager didn't allow incrementing the counter; generate a random number.
-            int randomNum = ThreadLocalRandom.current().nextInt(1, 10000); // Example range
-            LOGGER.info("Assigned random pool name '{}' due to security restrictions.", POOL_NAME_PREFIX + randomNum);
+            int randomNum = ThreadLocalRandom.current().nextInt(1, 10000);
+            log.info("Assigned random pool name '{}' due to security restrictions.", POOL_NAME_PREFIX + randomNum);
             return POOL_NAME_PREFIX + randomNum;
         }
     }

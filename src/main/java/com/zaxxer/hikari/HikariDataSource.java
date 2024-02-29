@@ -3,9 +3,9 @@ package com.zaxxer.hikari;
 import com.zaxxer.hikari.metrics.MetricsTrackerFactory;
 import com.zaxxer.hikari.pool.HikariPool;
 import com.zaxxer.hikari.pool.HikariPool.PoolInitializationException;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.io.Closeable;
@@ -22,14 +22,15 @@ import static com.zaxxer.hikari.pool.HikariPool.POOL_NORMAL;
  *
  * @author Brett Wooldridge
  */
+@Slf4j
+@ToString(onlyExplicitlyIncluded = true)
 @SuppressWarnings("unused")
 public class HikariDataSource extends HikariConfig implements DataSource, Closeable {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(HikariDataSource.class);
 
     private final AtomicBoolean isShutdown = new AtomicBoolean();
     private final HikariPool fastPathPool;
 
+    @ToString.Include
     private volatile HikariPool pool;
 
     /**
@@ -61,9 +62,9 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
         configuration.validate();
         configuration.copyStateTo(this);
 
-        LOGGER.info("{} - Starting...", configuration.getPoolName());
+        log.info("{} - Starting...", configuration.getPoolName());
         pool = fastPathPool = new HikariPool(this);
-        LOGGER.info("{} - Start completed.", configuration.getPoolName());
+        log.info("{} - Start completed.", configuration.getPoolName());
 
         seal();
     }
@@ -94,7 +95,7 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
 
                 if (hikariPool == null) {
                     validate();
-                    LOGGER.info("{} - Starting...", getPoolName());
+                    log.info("{} - Starting...", getPoolName());
 
                     try {
                         pool = hikariPool = new HikariPool(this);
@@ -107,7 +108,7 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
                         }
                     }
 
-                    LOGGER.info("{} - Start completed.", getPoolName());
+                    log.info("{} - Start completed.", getPoolName());
                 }
             }
         }
@@ -346,11 +347,11 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
 
         if (hikariPool != null) {
             try {
-                LOGGER.info("{} - Shutdown initiated...", getPoolName());
+                log.info("{} - Shutdown initiated...", getPoolName());
                 hikariPool.shutdown();
-                LOGGER.info("{} - Shutdown completed.", getPoolName());
+                log.info("{} - Shutdown completed.", getPoolName());
             } catch (InterruptedException ex) {
-                LOGGER.warn("{} - Interrupted during closing", getPoolName(), ex);
+                log.warn("{} - Interrupted during closing", getPoolName(), ex);
                 Thread.currentThread().interrupt();
             }
         }
@@ -363,13 +364,5 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
      */
     public boolean isClosed() {
         return isShutdown.get();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String toString() {
-        return "HikariDataSource (" + pool + ")";
     }
 }

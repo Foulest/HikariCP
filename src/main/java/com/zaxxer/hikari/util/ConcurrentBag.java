@@ -16,9 +16,8 @@
 package com.zaxxer.hikari.util;
 
 import com.zaxxer.hikari.util.ConcurrentBag.IConcurrentBagEntry;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -56,9 +55,8 @@ import static java.util.concurrent.locks.LockSupport.parkNanos;
  * @param <T> the templated type to store in the bag
  * @author Brett Wooldridge
  */
+@Slf4j
 public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseable {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(ConcurrentBag.class);
 
     private final CopyOnWriteArrayList<T> sharedList;
     private final boolean weakThreadLocals;
@@ -170,7 +168,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
      * @throws NullPointerException  if value is null
      * @throws IllegalStateException if the bagEntry was not borrowed from the bag
      */
-    public void requite(T bagEntry) {
+    public void requite(@NotNull T bagEntry) {
         bagEntry.setState(STATE_NOT_IN_USE);
 
         for (int i = 0; waiters.get() > 0; i++) {
@@ -197,7 +195,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
      */
     public void add(T bagEntry) {
         if (closed) {
-            LOGGER.info("ConcurrentBag has been closed, ignoring add()");
+            log.info("ConcurrentBag has been closed, ignoring add()");
             throw new IllegalStateException("ConcurrentBag has been closed, ignoring add()");
         }
 
@@ -218,17 +216,17 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
      * @throws IllegalStateException if an attempt is made to remove an object
      *                               from the bag that was not borrowed or reserved first
      */
-    public boolean remove(T bagEntry) {
+    public boolean remove(@NotNull T bagEntry) {
         if (!bagEntry.compareAndSet(STATE_IN_USE, STATE_REMOVED)
                 && !bagEntry.compareAndSet(STATE_RESERVED, STATE_REMOVED) && !closed) {
-            LOGGER.warn("Attempt to remove an object from the bag that was not borrowed or reserved: {}", bagEntry);
+            log.warn("Attempt to remove an object from the bag that was not borrowed or reserved: {}", bagEntry);
             return false;
         }
 
         boolean removed = sharedList.remove(bagEntry);
 
         if (!removed && !closed) {
-            LOGGER.warn("Attempt to remove an object from the bag that does not exist: {}", bagEntry);
+            log.warn("Attempt to remove an object from the bag that does not exist: {}", bagEntry);
         }
 
         threadList.get().remove(bagEntry);
@@ -301,7 +299,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
                 Thread.yield();
             }
         } else {
-            LOGGER.warn("Attempt to relinquish an object to the bag that was not reserved: {}", bagEntry);
+            log.warn("Attempt to relinquish an object to the bag that was not reserved: {}", bagEntry);
         }
     }
 
@@ -354,7 +352,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
     }
 
     public void dumpState() {
-        sharedList.forEach(entry -> LOGGER.info(entry.toString()));
+        sharedList.forEach(entry -> log.info(entry.toString()));
     }
 
     /**

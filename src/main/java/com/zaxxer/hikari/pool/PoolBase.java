@@ -10,9 +10,9 @@ import com.zaxxer.hikari.util.UtilityElf;
 import com.zaxxer.hikari.util.UtilityElf.DefaultThreadFactory;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -37,14 +37,15 @@ import static com.zaxxer.hikari.util.UtilityElf.createInstance;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+@Slf4j
 @Getter
+@ToString(onlyExplicitlyIncluded = true)
 abstract class PoolBase {
-
-    private final Logger logger = LoggerFactory.getLogger(PoolBase.class);
 
     public final HikariConfig config;
     IMetricsTrackerDelegate metricsTracker;
 
+    @ToString.Include
     protected final String poolName;
 
     volatile String catalog;
@@ -106,14 +107,6 @@ abstract class PoolBase {
         initializeDataSource();
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String toString() {
-        return poolName;
-    }
-
     abstract void recycle(PoolEntry poolEntry);
 
     // ***********************************************************************
@@ -123,7 +116,7 @@ abstract class PoolBase {
     void quietlyCloseConnection(Connection connection, String closureReason) {
         if (connection != null) {
             try {
-                logger.debug("{} - Closing connection {}: {}", poolName, connection, closureReason);
+                log.debug("{} - Closing connection {}: {}", poolName, connection, closureReason);
 
                 try {
                     setNetworkTimeout(connection, SECONDS.toMillis(15));
@@ -132,7 +125,7 @@ abstract class PoolBase {
                     connection.close(); // continue with the close even if setNetworkTimeout() throws
                 }
             } catch (Exception ex) {
-                logger.debug("{} - Closing connection {} failed", poolName, connection, ex);
+                log.debug("{} - Closing connection {} failed", poolName, connection, ex);
             }
         }
     }
@@ -167,7 +160,7 @@ abstract class PoolBase {
             return true;
         } catch (Exception ex) {
             lastConnectionFailure.set(ex);
-            logger.warn("{} - Failed to validate connection {} ({})."
+            log.warn("{} - Failed to validate connection {} ({})."
                     + " Possibly consider using a shorter maxLifetime value.", poolName, connection, ex.getMessage());
             return false;
         }
@@ -225,8 +218,8 @@ abstract class PoolBase {
             resetBits |= DIRTY_BIT_SCHEMA;
         }
 
-        if (resetBits != 0 && logger.isDebugEnabled()) {
-            logger.debug("{} - Reset ({}) on connection {}", poolName, stringFromResetBits(resetBits), connection);
+        if (resetBits != 0 && log.isDebugEnabled()) {
+            log.debug("{} - Reset ({}) on connection {}", poolName, stringFromResetBits(resetBits), connection);
         }
     }
 
@@ -276,14 +269,14 @@ abstract class PoolBase {
                     mBeanServer.registerMBean(config, beanConfigName);
                     mBeanServer.registerMBean(hikariPool, beanPoolName);
                 } else {
-                    logger.error("{} - JMX name ({}) is already registered.", poolName, poolName);
+                    log.error("{} - JMX name ({}) is already registered.", poolName, poolName);
                 }
             } else if (mBeanServer.isRegistered(beanConfigName)) {
                 mBeanServer.unregisterMBean(beanConfigName);
                 mBeanServer.unregisterMBean(beanPoolName);
             }
         } catch (Exception ex) {
-            logger.warn("{} - Failed to {} management beans.", poolName, (register ? "register" : "unregister"), ex);
+            log.warn("{} - Failed to {} management beans.", poolName, (register ? "register" : "unregister"), ex);
         }
     }
 
@@ -357,7 +350,7 @@ abstract class PoolBase {
             if (connection != null) {
                 quietlyCloseConnection(connection, "(Failed to create/setup connection)");
             } else if (getLastConnectionFailure() == null) {
-                logger.debug("{} - Failed to create/setup connection: {}", poolName, ex.getMessage());
+                log.debug("{} - Failed to create/setup connection: {}", poolName, ex.getMessage());
             }
 
             lastConnectionFailure.set(ex);
@@ -442,7 +435,7 @@ abstract class PoolBase {
                 executeSql(connection, config.getConnectionTestQuery(), false);
             }
         } catch (Exception | AbstractMethodError ex) {
-            logger.error("{} - Failed to execute{} connection test query ({}).", poolName,
+            log.error("{} - Failed to execute{} connection test query ({}).", poolName,
                     (isUseJdbc4Validation ? " isValid() for connection, configure" : ""), ex.getMessage());
             throw ex;
         }
@@ -462,7 +455,7 @@ abstract class PoolBase {
                 transactionIsolation = defaultTransactionIsolation;
             }
         } catch (SQLException ex) {
-            logger.warn("{} - Default transaction isolation level detection failed ({}).", poolName, ex.getMessage());
+            log.warn("{} - Default transaction isolation level detection failed ({}).", poolName, ex.getMessage());
 
             if (ex.getSQLState() != null && !ex.getSQLState().startsWith("08")) {
                 throw ex;
@@ -484,7 +477,7 @@ abstract class PoolBase {
             } catch (Exception ex) {
                 if (isQueryTimeoutSupported == UNINITIALIZED) {
                     isQueryTimeoutSupported = FALSE;
-                    logger.info("{} - Failed to set query timeout for statement. ({})", poolName, ex.getMessage());
+                    log.info("{} - Failed to set query timeout for statement. ({})", poolName, ex.getMessage());
                 }
             }
         }
@@ -509,14 +502,14 @@ abstract class PoolBase {
                 if (isNetworkTimeoutSupported == UNINITIALIZED) {
                     isNetworkTimeoutSupported = FALSE;
 
-                    logger.info("{} - Driver does not support get/set network timeout for connections. ({})",
+                    log.info("{} - Driver does not support get/set network timeout for connections. ({})",
                             poolName, ex.getMessage());
 
                     if (validationTimeout < SECONDS.toMillis(1)) {
-                        logger.warn("{} - A validationTimeout of less than 1 second cannot be honored on drivers"
+                        log.warn("{} - A validationTimeout of less than 1 second cannot be honored on drivers"
                                 + " without setNetworkTimeout() support.", poolName);
                     } else if (validationTimeout % SECONDS.toMillis(1) != 0) {
-                        logger.warn("{} - A validationTimeout with fractional second granularity cannot be honored"
+                        log.warn("{} - A validationTimeout with fractional second granularity cannot be honored"
                                 + " on drivers without setNetworkTimeout() support.", poolName);
                     }
                 }
@@ -593,7 +586,7 @@ abstract class PoolBase {
             try {
                 dataSource.setLoginTimeout(Math.max(1, (int) MILLISECONDS.toSeconds(500L + connectionTimeout)));
             } catch (Exception ex) {
-                logger.info("{} - Failed to set login timeout for data source. ({})", poolName, ex.getMessage());
+                log.info("{} - Failed to set login timeout for data source. ({})", poolName, ex.getMessage());
             }
         }
     }
@@ -648,7 +641,7 @@ abstract class PoolBase {
             try {
                 command.run();
             } catch (Exception ex) {
-                LoggerFactory.getLogger(PoolBase.class).debug("Failed to execute: {}", command, ex);
+                log.debug("Failed to execute: {}", command, ex);
             }
         }
     }
