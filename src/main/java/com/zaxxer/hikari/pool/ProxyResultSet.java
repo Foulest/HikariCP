@@ -25,9 +25,6 @@ public abstract class ProxyResultSet implements ResultSet {
         return connection.checkException(ex);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String toString() {
         return getClass().getSimpleName() + '@' + System.identityHashCode(this) + " wrapping " + delegate;
@@ -37,36 +34,24 @@ public abstract class ProxyResultSet implements ResultSet {
     //                 Overridden java.sql.ResultSet Methods
     // **********************************************************************
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void updateRow() throws SQLException {
         connection.markCommitStateDirty();
         delegate.updateRow();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void insertRow() throws SQLException {
         connection.markCommitStateDirty();
         delegate.insertRow();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void deleteRow() throws SQLException {
         connection.markCommitStateDirty();
         delegate.deleteRow();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     @SuppressWarnings("unchecked")
     public final <T> T unwrap(@NotNull Class<T> iface) throws SQLException {

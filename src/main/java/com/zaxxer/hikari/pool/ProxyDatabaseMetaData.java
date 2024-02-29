@@ -16,9 +16,6 @@ public abstract class ProxyDatabaseMetaData implements DatabaseMetaData {
         return connection.checkException(ex);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final @NotNull String toString() {
         String delegateToString = delegate.toString();
@@ -29,9 +26,6 @@ public abstract class ProxyDatabaseMetaData implements DatabaseMetaData {
     //                 Overridden java.sql.DatabaseMetaData Methods
     // **********************************************************************
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final Connection getConnection() {
         return connection;
@@ -346,9 +340,6 @@ public abstract class ProxyDatabaseMetaData implements DatabaseMetaData {
         return ProxyFactory.getProxyResultSet(connection, (ProxyStatement) statement, resultSet);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     @SuppressWarnings("unchecked")
     public final <T> T unwrap(@NotNull Class<T> iface) throws SQLException {

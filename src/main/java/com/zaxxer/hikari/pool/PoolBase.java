@@ -633,9 +633,6 @@ abstract class PoolBase {
      */
     private static class SynchronousExecutor implements Executor {
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public void execute(@NotNull Runnable command) {
             try {

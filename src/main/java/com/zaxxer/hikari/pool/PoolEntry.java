@@ -110,9 +110,6 @@ final class PoolEntry implements IConcurrentBagEntry {
         return hikariPool;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public @NotNull String toString() {
         return connection + ", accessed " + elapsedDisplayString(lastAccessed, currentTime()) + " ago, " + stateToString();
@@ -122,25 +119,16 @@ final class PoolEntry implements IConcurrentBagEntry {
     //                      IConcurrentBagEntry methods
     // ***********************************************************************
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public int getState() {
         return stateUpdater.get(this);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean compareAndSet(int expect, int update) {
         return stateUpdater.compareAndSet(this, expect, update);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void setState(int update) {
         stateUpdater.set(this, update);

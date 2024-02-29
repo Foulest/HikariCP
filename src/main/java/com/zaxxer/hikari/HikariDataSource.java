@@ -73,9 +73,6 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
     //                          DataSource methods
     // ***********************************************************************
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Connection getConnection() throws SQLException {
         if (isClosed()) {
@@ -115,26 +112,17 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
         return hikariPool.getConnection();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Connection getConnection(String username, String password) throws SQLException {
         throw new SQLFeatureNotSupportedException();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public PrintWriter getLogWriter() throws SQLException {
         HikariPool hikariPool = pool;
         return (hikariPool != null ? hikariPool.getUnwrappedDataSource().getLogWriter() : null);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void setLogWriter(PrintWriter out) throws SQLException {
         HikariPool hikariPool = pool;
@@ -144,9 +132,6 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void setLoginTimeout(int seconds) throws SQLException {
         HikariPool hikariPool = pool;
@@ -156,26 +141,17 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public int getLoginTimeout() throws SQLException {
         HikariPool hikariPool = pool;
         return (hikariPool != null ? hikariPool.getUnwrappedDataSource().getLoginTimeout() : 0);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException {
         throw new SQLFeatureNotSupportedException();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     @SuppressWarnings("unchecked")
     public <T> T unwrap(@NotNull Class<T> iface) throws SQLException {
@@ -199,9 +175,6 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
         throw new SQLException("Wrapped DataSource is not an instance of " + iface);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean isWrapperFor(@NotNull Class<?> iface) throws SQLException {
         if (iface.isInstance(this)) {
@@ -228,9 +201,6 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
     //                        HikariConfigMXBean methods
     // ***********************************************************************
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void setMetricRegistry(Object metricRegistry) {
         boolean isAlreadySet = getMetricRegistry() != null;
@@ -247,9 +217,6 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory) {
         boolean isAlreadySet = getMetricsTrackerFactory() != null;
@@ -266,9 +233,6 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void setHealthCheckRegistry(Object healthCheckRegistry) {
         boolean isAlreadySet = getHealthCheckRegistry() != null;

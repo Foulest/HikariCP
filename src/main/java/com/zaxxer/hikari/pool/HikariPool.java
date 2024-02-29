@@ -301,9 +301,6 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
     //                        IBagStateListener callback
     // ***********************************************************************
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void addBagItem(int waiting) {
         boolean shouldAdd = waiting - addConnectionQueueReadOnlyView.size() >= 0; // Yes, >= is intentional.
@@ -320,50 +317,32 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
     //                        HikariPoolMBean methods
     // ***********************************************************************
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public int getActiveConnections() {
         return connectionBag.getCount(STATE_IN_USE);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public int getIdleConnections() {
         return connectionBag.getCount(STATE_NOT_IN_USE);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public int getTotalConnections() {
         return connectionBag.size();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public int getThreadsAwaitingConnection() {
         return connectionBag.getWaitingThreadCount();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void softEvictConnections() {
         connectionBag.values().forEach(poolEntry -> softEvictConnection(poolEntry,
                 "(connection evicted)", false));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public synchronized void suspendPool() {
         if (suspendResumeLock == SuspendResumeLock.FAUX_LOCK) {
@@ -374,9 +353,6 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public synchronized void resumePool() {
         if (poolState == POOL_SUSPENDED) {

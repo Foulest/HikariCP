@@ -144,9 +144,6 @@ public class HikariConfig implements HikariConfigMXBean {
     //                       HikariConfigMXBean methods
     // ***********************************************************************
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void setConnectionTimeout(long connectionTimeoutMs) {
         if (connectionTimeoutMs == 0) {
@@ -158,9 +155,6 @@ public class HikariConfig implements HikariConfigMXBean {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void setIdleTimeout(long idleTimeoutMs) {
         if (idleTimeoutMs < 0) {
@@ -169,9 +163,6 @@ public class HikariConfig implements HikariConfigMXBean {
         idleTimeout = idleTimeoutMs;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void setMaximumPoolSize(int maximumPoolSize) {
         if (maximumPoolSize < 1) {
@@ -180,9 +171,6 @@ public class HikariConfig implements HikariConfigMXBean {
         this.maximumPoolSize = maximumPoolSize;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void setMinimumIdle(int minimumIdle) {
         if (minimumIdle < 0) {
@@ -191,9 +179,6 @@ public class HikariConfig implements HikariConfigMXBean {
         this.minimumIdle = minimumIdle;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void setValidationTimeout(long validationTimeout) {
         if (validationTimeout < SOFT_TIMEOUT_FLOOR) {

@@ -123,17 +123,11 @@ public class MicrometerMetricsTracker implements IMetricsTracker {
                 .register(meterRegistry);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void recordConnectionAcquiredNanos(long elapsedAcquiredNanos) {
         connectionObtainTimer.record(elapsedAcquiredNanos, TimeUnit.NANOSECONDS);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void recordConnectionUsageMillis(long elapsedBorrowedMillis) {
         connectionUsage.record(elapsedBorrowedMillis, TimeUnit.MILLISECONDS);

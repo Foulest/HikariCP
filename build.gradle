@@ -54,7 +54,7 @@ dependencies {
     compileOnly group: 'io.prometheus', name: 'simpleclient', version: '0.16.0'
 
     // Hibernate Core - for database connections
-    // Updated from version 5.4.16.Final to 5.6.15.Final
+    // Updated from version 5.4.16.Final to 5.6.15.Final (keep on this version)
     // https://mvnrepository.com/artifact/org.hibernate/hibernate-core
     compileOnly group: 'org.hibernate', name: 'hibernate-core', version: '5.6.15.Final'
 

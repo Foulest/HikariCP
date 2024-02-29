@@ -82,9 +82,6 @@ public final class CodahaleHealthChecker {
                     ? checkTimeoutMs : TimeUnit.SECONDS.toMillis(10));
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         protected Result check() {
             try (Connection ignored = pool.getConnection(checkTimeoutMs)) {
@@ -101,9 +98,6 @@ public final class CodahaleHealthChecker {
         private final Timer waitTimer;
         private final long expected99thPercentile;
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         protected Result check() {
             long the99thPercentile = TimeUnit.NANOSECONDS.toMillis(

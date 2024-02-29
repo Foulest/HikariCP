@@ -181,73 +181,46 @@ public interface ClockSource {
 
     final class MillisecondClockSource implements ClockSource {
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public long currentTime0() {
             return System.currentTimeMillis();
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public long elapsedMillis0(long startTime) {
             return System.currentTimeMillis() - startTime;
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public long elapsedMillis0(long startTime, long endTime) {
             return endTime - startTime;
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public long elapsedNanos0(long startTime) {
             return MILLISECONDS.toNanos(System.currentTimeMillis() - startTime);
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public long elapsedNanos0(long startTime, long endTime) {
             return MILLISECONDS.toNanos(endTime - startTime);
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public long toMillis0(long time) {
             return time;
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public long toNanos0(long time) {
             return MILLISECONDS.toNanos(time);
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public long plusMillis0(long time, long millis) {
             return time + millis;
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public TimeUnit getSourceTimeUnit0() {
             return MILLISECONDS;
@@ -256,73 +229,46 @@ public interface ClockSource {
 
     class NanosecondClockSource implements ClockSource {
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public long currentTime0() {
             return System.nanoTime();
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public long toMillis0(long time) {
             return NANOSECONDS.toMillis(time);
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public long toNanos0(long time) {
             return time;
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public long elapsedMillis0(long startTime) {
             return NANOSECONDS.toMillis(System.nanoTime() - startTime);
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public long elapsedMillis0(long startTime, long endTime) {
             return NANOSECONDS.toMillis(endTime - startTime);
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public long elapsedNanos0(long startTime) {
             return System.nanoTime() - startTime;
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public long elapsedNanos0(long startTime, long endTime) {
             return endTime - startTime;
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public long plusMillis0(long time, long millis) {
             return time + MILLISECONDS.toNanos(millis);
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public TimeUnit getSourceTimeUnit0() {
             return NANOSECONDS;

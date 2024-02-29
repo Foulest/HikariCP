@@ -60,9 +60,6 @@ public final class CodaHaleMetricsTracker implements IMetricsTracker {
                 (Gauge<Integer>) poolStats::getMinConnections);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void close() {
         removeFromRegistry(METRIC_NAME_WAIT, METRIC_NAME_USAGE, METRIC_NAME_CONNECT,
@@ -81,17 +78,11 @@ public final class CodaHaleMetricsTracker implements IMetricsTracker {
         registry.remove(MetricRegistry.name(poolName, METRIC_CATEGORY, metricNameTotalConnections));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void recordConnectionAcquiredNanos(long elapsedAcquiredNanos) {
         connectionAcquisitionTimer.update(elapsedAcquiredNanos, TimeUnit.NANOSECONDS);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void recordConnectionUsageMillis(long elapsedBorrowedMillis) {
         connectionDurationHistogram.update(elapsedBorrowedMillis);

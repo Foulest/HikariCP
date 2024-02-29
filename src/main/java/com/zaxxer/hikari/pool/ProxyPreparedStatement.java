@@ -19,18 +19,12 @@ public abstract class ProxyPreparedStatement extends ProxyStatement implements P
     //              Overridden java.sql.PreparedStatement Methods
     // **********************************************************************
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean execute() throws SQLException {
         connection.markCommitStateDirty();
         return ((PreparedStatement) delegate).execute();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public ResultSet executeQuery() throws SQLException {
         connection.markCommitStateDirty();
@@ -38,18 +32,12 @@ public abstract class ProxyPreparedStatement extends ProxyStatement implements P
         return ProxyFactory.getProxyResultSet(connection, this, resultSet);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public int executeUpdate() throws SQLException {
         connection.markCommitStateDirty();
         return ((PreparedStatement) delegate).executeUpdate();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public long executeLargeUpdate() throws SQLException {
         connection.markCommitStateDirty();

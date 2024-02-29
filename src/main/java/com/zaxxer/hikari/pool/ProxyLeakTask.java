@@ -52,9 +52,6 @@ class ProxyLeakTask implements Runnable {
         scheduledFuture = executorService.schedule(this, leakDetectionThreshold, TimeUnit.MILLISECONDS);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void run() {
         isLeaked = true;
