@@ -24,7 +24,7 @@ repositories {
 
 dependencies {
     // Micrometer Core - for metrics
-    // Updated from version 1.5.10 to 1.12.3
+    // Updated from version 1.5.10 to 1.12.4
     // https://mvnrepository.com/artifact/io.micrometer/micrometer-core
     compileOnly group: 'io.micrometer', name: 'micrometer-core', version: '1.12.4'
 
@@ -69,6 +69,10 @@ dependencies {
 }
 
 tasks {
+    jar {
+        archiveFileName.set("${project.name}-${project.version}-default.jar")
+    }
+
     shadowJar {
         archiveFileName.set("${project.name}-${project.version}.jar")
         enableRelocation = true
@@ -92,14 +96,6 @@ tasks {
 
     tasks.register('sourceJar', Jar) {
         from sourceSets.main.allJava
-    }
-
-    jar.configure {
-        archiveClassifier = 'default'
-    }
-
-    shadowJar.configure {
-        archiveClassifier = null
     }
 }
 
