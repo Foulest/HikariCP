@@ -50,7 +50,7 @@ dependencies {
     // Hibernate Core - for database connections
     // Note: Keep this dependency on version 5.6.15.Final
     // https://mvnrepository.com/artifact/org.hibernate/hibernate-core
-    compileOnly group: 'org.hibernate', name: 'hibernate-core', version: '5.6.15.Final'
+    compileOnly group: 'org.hibernate', name: 'hibernate-core', version: '6.4.6.Final'
 
     // JetBrains Annotations - for code inspection and documentation
     // https://mvnrepository.com/artifact/org.jetbrains/annotations
