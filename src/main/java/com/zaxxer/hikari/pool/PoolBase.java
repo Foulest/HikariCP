@@ -107,6 +107,7 @@ abstract class PoolBase {
         initializeDataSource();
     }
 
+    @SuppressWarnings("unused")
     abstract void recycle(PoolEntry poolEntry);
 
     // ***********************************************************************

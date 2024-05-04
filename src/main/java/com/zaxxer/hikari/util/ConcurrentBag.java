@@ -351,6 +351,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
         return sharedList.size();
     }
 
+    @SuppressWarnings("unused")
     public void dumpState() {
         sharedList.forEach(entry -> log.info(entry.toString()));
     }

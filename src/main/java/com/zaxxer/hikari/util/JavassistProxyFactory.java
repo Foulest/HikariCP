@@ -99,7 +99,7 @@ public final class JavassistProxyFactory {
         CtClass targetCt = classPool.makeClass(newClassName, superCt);
         targetCt.setModifiers(Modifier.setPublic(Modifier.FINAL));
 
-        log.debug("Generating " + newClassName);
+        log.debug("Generating {}", newClassName);
 
         // Make a set of method signatures we inherit implementation for, so we don't generate delegates for these
         Set<String> superSigs = new HashSet<>();

@@ -44,7 +44,6 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
      * changes are possible -- except via {@link HikariConfigMXBean} methods.
      */
     public HikariDataSource() {
-        super();
         fastPathPool = null;
     }
 
@@ -62,9 +61,9 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
         configuration.validate();
         configuration.copyStateTo(this);
 
-        log.info("{} - Starting...", configuration.getPoolName());
+        log.info("{} - Starting HikariDataSource...", configuration.getPoolName());
         pool = fastPathPool = new HikariPool(this);
-        log.info("{} - Start completed.", configuration.getPoolName());
+        log.info("{} - HikariDataSource start completed.", configuration.getPoolName());
 
         seal();
     }
@@ -92,7 +91,7 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
 
                 if (hikariPool == null) {
                     validate();
-                    log.info("{} - Starting...", getPoolName());
+                    log.info("{} - Starting Connection...", getPoolName());
 
                     try {
                         pool = hikariPool = new HikariPool(this);
@@ -105,7 +104,7 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
                         }
                     }
 
-                    log.info("{} - Start completed.", getPoolName());
+                    log.info("{} - Connection start completed.", getPoolName());
                 }
             }
         }
@@ -212,7 +211,7 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
             if (isAlreadySet) {
                 throw new IllegalStateException("MetricRegistry can only be set one time");
             } else {
-                hikariPool.setMetricRegistry(super.getMetricRegistry());
+                hikariPool.setMetricRegistry(getMetricRegistry());
             }
         }
     }
@@ -228,7 +227,7 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
             if (isAlreadySet) {
                 throw new IllegalStateException("MetricsTrackerFactory can only be set one time");
             } else {
-                hikariPool.setMetricsTrackerFactory(super.getMetricsTrackerFactory());
+                hikariPool.setMetricsTrackerFactory(getMetricsTrackerFactory());
             }
         }
     }
@@ -244,7 +243,7 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
             if (isAlreadySet) {
                 throw new IllegalStateException("HealthCheckRegistry can only be set one time");
             } else {
-                hikariPool.setHealthCheckRegistry(super.getHealthCheckRegistry());
+                hikariPool.setHealthCheckRegistry(getHealthCheckRegistry());
             }
         }
     }

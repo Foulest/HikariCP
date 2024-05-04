@@ -308,9 +308,9 @@ public class HikariConfig implements HikariConfigMXBean {
     }
 
     /**
-     * Set whether or not pool suspension is allowed.  There is a performance
-     * impact when pool suspension is enabled.  Unless you need it (for a
-     * redundancy system for example) do not enable it.
+     * Set whether pool suspension is allowed.
+     * There is a performance impact when pool suspension is enabled.
+     * Unless you need it (for a redundancy system for example) do not enable it.
      *
      * @param allowPoolSuspension the desired pool suspension allowance
      */

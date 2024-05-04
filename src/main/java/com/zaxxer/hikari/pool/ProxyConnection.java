@@ -23,7 +23,7 @@ import static com.zaxxer.hikari.util.ClockSource.currentTime;
  */
 @Slf4j
 @Getter(lombok.AccessLevel.PACKAGE)
-@SuppressWarnings({"SqlSourceToSinkFlow", "unused"})
+@SuppressWarnings({"unused", "SqlSourceToSinkFlow"})
 public abstract class ProxyConnection implements Connection {
 
     static final int DIRTY_BIT_READONLY = 0b000001;
@@ -114,7 +114,6 @@ public abstract class ProxyConnection implements Connection {
     //                          Internal methods
     // ***********************************************************************
 
-    @SuppressWarnings("ConstantConditions")
     final SQLException checkException(SQLException ex) {
         boolean evict = false;
         SQLException nse = ex;
@@ -140,9 +139,8 @@ public abstract class ProxyConnection implements Connection {
         }
 
         if (evict) {
-            SQLException exception = (nse != null) ? nse : ex;
             log.warn("{} - Connection {} marked as broken because of SQLSTATE({}), ErrorCode({})",
-                    poolEntry.getPoolName(), delegate, exception.getSQLState(), exception.getErrorCode(), exception);
+                    poolEntry.getPoolName(), delegate, nse.getSQLState(), nse.getErrorCode(), nse);
             leakTask.cancel();
             poolEntry.evict("(connection is broken)");
             delegate = ClosedConnection.CLOSED_CONNECTION;
@@ -406,21 +404,18 @@ public abstract class ProxyConnection implements Connection {
             InvocationHandler handler = (proxy, method, args) -> {
                 String methodName = method.getName();
 
-                if ("isClosed".equals(methodName)) {
-                    return Boolean.TRUE;
-                } else if ("isValid".equals(methodName)) {
-                    return Boolean.FALSE;
+                switch (methodName) {
+                    case "isClosed":
+                        return Boolean.TRUE;
+                    case "isValid":
+                        return Boolean.FALSE;
+                    case "abort":
+                    case "close":
+                        return Void.TYPE;
+                    case "toString":
+                        return ClosedConnection.class.getCanonicalName();
                 }
 
-                if ("abort".equals(methodName)) {
-                    return Void.TYPE;
-                }
-
-                if ("close".equals(methodName)) {
-                    return Void.TYPE;
-                } else if ("toString".equals(methodName)) {
-                    return ClosedConnection.class.getCanonicalName();
-                }
                 throw new SQLException("Connection is closed");
             };
 

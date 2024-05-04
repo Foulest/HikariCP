@@ -24,6 +24,7 @@ public interface SQLExceptionOverride {
      * @param ignored the #SQLException to adjudicate
      * @return either one of {@link Override#CONTINUE_EVICT} or {@link Override#DO_NOT_EVICT}
      */
+    @SuppressWarnings("SameReturnValue")
     default Override adjudicate(SQLException ignored) {
         return Override.CONTINUE_EVICT;
     }

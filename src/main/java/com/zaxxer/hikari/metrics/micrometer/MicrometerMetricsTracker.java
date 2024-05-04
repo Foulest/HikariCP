@@ -32,7 +32,6 @@ import java.util.concurrent.TimeUnit;
  * </pre></blockquote>
  */
 @Getter
-@SuppressWarnings("FieldCanBeLocal")
 public class MicrometerMetricsTracker implements IMetricsTracker {
 
     /**
