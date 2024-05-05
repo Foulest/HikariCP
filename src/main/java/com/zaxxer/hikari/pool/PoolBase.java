@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.SQLExceptionOverride;
 import com.zaxxer.hikari.metrics.IMetricsTracker;
 import com.zaxxer.hikari.pool.HikariPool.PoolInitializationException;
+import com.zaxxer.hikari.util.Credentials;
 import com.zaxxer.hikari.util.DriverDataSource;
 import com.zaxxer.hikari.util.PropertyElf;
 import com.zaxxer.hikari.util.UtilityElf;
@@ -64,7 +65,7 @@ abstract class PoolBase {
     private static final int FALSE = 0;
 
     private int networkTimeout;
-    private int isNetworkTimeoutSupported;
+    private volatile int isNetworkTimeoutSupported;
     private int isQueryTimeoutSupported;
     private int defaultTransactionIsolation;
     private int transactionIsolation;
@@ -88,9 +89,7 @@ abstract class PoolBase {
         isReadOnly = config.isReadOnly();
         isAutoCommit = config.isAutoCommit();
 
-        exceptionOverride = UtilityElf.createInstance(
-                config.getExceptionOverrideClassName(), SQLExceptionOverride.class
-        );
+        exceptionOverride = config.getExceptionOverride();
 
         transactionIsolation = UtilityElf.getTransactionIsolation(config.getTransactionIsolation());
 
@@ -131,8 +130,7 @@ abstract class PoolBase {
         }
     }
 
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    boolean isConnectionAlive(Connection connection) {
+    boolean isConnectionDead(Connection connection) {
         try {
             try {
                 setNetworkTimeout(connection, validationTimeout);
@@ -225,6 +223,8 @@ abstract class PoolBase {
     }
 
     void shutdownNetworkTimeoutExecutor() {
+        isNetworkTimeoutSupported = UNINITIALIZED; // #2147
+
         if (netTimeoutExecutor instanceof ThreadPoolExecutor) {
             ((ThreadPoolExecutor) netTimeoutExecutor).shutdownNow();
         }
@@ -290,8 +290,7 @@ abstract class PoolBase {
      */
     private void initializeDataSource() {
         String jdbcUrl = config.getJdbcUrl();
-        String username = config.getUsername();
-        String password = config.getPassword();
+        Credentials credentials = config.getCredentials();
         String dsClassName = config.getDataSourceClassName();
         String driverClassName = config.getDriverClassName();
         String dataSourceJNDI = config.getDataSourceJNDI();
@@ -303,7 +302,8 @@ abstract class PoolBase {
             PropertyElf.setTargetFromProperties(ds, dataSourceProperties);
 
         } else if (jdbcUrl != null && ds == null) {
-            ds = new DriverDataSource(jdbcUrl, driverClassName, dataSourceProperties, username, password);
+            ds = new DriverDataSource(jdbcUrl, driverClassName, dataSourceProperties,
+                    credentials.getUsername(), credentials.getPassword());
 
         } else if (dataSourceJNDI != null && ds == null) {
             try {
@@ -332,8 +332,9 @@ abstract class PoolBase {
         Connection connection = null;
 
         try {
-            String username = config.getUsername();
-            String password = config.getPassword();
+            Credentials credentials = config.getCredentials();
+            String username = credentials.getUsername();
+            String password = credentials.getPassword();
 
             connection = (username == null)
                     ? unwrappedDataSource.getConnection()
@@ -568,7 +569,7 @@ abstract class PoolBase {
         } else {
             ThreadFactory threadFactory = config.getThreadFactory();
             threadFactory = threadFactory != null ? threadFactory
-                    : new DefaultThreadFactory(poolName + " network timeout executor", true);
+                    : new DefaultThreadFactory(poolName + ":network-timeout-executor", true);
 
             ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newCachedThreadPool(threadFactory);
             executor.setKeepAliveTime(15, SECONDS);

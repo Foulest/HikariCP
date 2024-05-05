@@ -125,7 +125,8 @@ public abstract class ProxyConnection implements Connection {
             if (sqlState != null && sqlState.startsWith("08")
                     || nse instanceof SQLTimeoutException
                     || ERROR_STATES.contains(sqlState)
-                    || ERROR_CODES.contains(nse.getErrorCode())) {
+                    || ERROR_CODES.contains(nse.getErrorCode())
+                    || exceptionOverride != null && exceptionOverride.adjudicateAnyway()) {
                 if (exceptionOverride != null && exceptionOverride.adjudicate(nse) == DO_NOT_EVICT) {
                     break;
                 }
@@ -331,7 +332,7 @@ public abstract class ProxyConnection implements Connection {
     @Override
     public void rollback(Savepoint savepoint) throws SQLException {
         delegate.rollback(savepoint);
-        isCommitStateDirty = false;
+        isCommitStateDirty = true;
         lastAccess = currentTime();
     }
 

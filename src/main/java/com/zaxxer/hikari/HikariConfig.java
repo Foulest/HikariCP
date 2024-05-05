@@ -2,6 +2,7 @@ package com.zaxxer.hikari;
 
 import com.codahale.metrics.health.HealthCheckRegistry;
 import com.zaxxer.hikari.metrics.MetricsTrackerFactory;
+import com.zaxxer.hikari.util.Credentials;
 import com.zaxxer.hikari.util.PropertyElf;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,6 +29,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.zaxxer.hikari.util.UtilityElf.getNullIfEmpty;
 import static com.zaxxer.hikari.util.UtilityElf.safeIsAssignableFrom;
@@ -46,6 +48,7 @@ public class HikariConfig implements HikariConfigMXBean {
     private static final long SOFT_TIMEOUT_FLOOR = Long.getLong("com.zaxxer.hikari.timeoutMs.floor", 250L);
     private static final long IDLE_TIMEOUT = MINUTES.toMillis(10);
     private static final long MAX_LIFETIME = MINUTES.toMillis(30);
+    private static final double DEFAULT_MAX_LIFETIME_VARIANCE = 2.5;
     private static final long DEFAULT_KEEPALIVE_TIME = 0L;
     private static final long MIN_LIFETIME = SECONDS.toMillis(30);
     private static final long MIN_KEEPALIVE_TIME = MIN_LIFETIME; // Assuming the same minimum as lifetime for simplicity
@@ -58,13 +61,13 @@ public class HikariConfig implements HikariConfigMXBean {
 
     // Properties changeable at runtime through the HikariConfigMXBean
     private volatile String catalog;
-    private volatile String username;
-    private volatile String password;
+    private final AtomicReference<Credentials> credentials = new AtomicReference<>(Credentials.of(null, null));
     private volatile long connectionTimeout;
     private volatile long validationTimeout;
     private volatile long idleTimeout;
     private volatile long leakDetectionThreshold;
     private volatile long maxLifetime;
+    private volatile double maxLifetimeVariance;
     private volatile int maximumPoolSize;
     private volatile int minimumIdle;
     private long initializationFailTimeout;
@@ -74,6 +77,7 @@ public class HikariConfig implements HikariConfigMXBean {
     private String dataSourceJNDI;
     private String driverClassName;
     private String exceptionOverrideClassName;
+    private SQLExceptionOverride exceptionOverride;
     private String jdbcUrl;
     private String poolName;
     private String schema;
@@ -105,6 +109,7 @@ public class HikariConfig implements HikariConfigMXBean {
         minimumIdle = -1;
         maximumPoolSize = -1;
         maxLifetime = MAX_LIFETIME;
+        maxLifetimeVariance = DEFAULT_MAX_LIFETIME_VARIANCE;
         connectionTimeout = CONNECTION_TIMEOUT;
         validationTimeout = VALIDATION_TIMEOUT;
         idleTimeout = IDLE_TIMEOUT;
@@ -169,6 +174,43 @@ public class HikariConfig implements HikariConfigMXBean {
             throw new IllegalArgumentException("maxPoolSize cannot be less than 1");
         }
         this.maximumPoolSize = maximumPoolSize;
+    }
+
+    public String getPassword() {
+        return credentials.get().getPassword();
+    }
+
+    @Override
+    public void setPassword(String password) {
+        credentials.updateAndGet(current -> Credentials.of(current.getUsername(), password));
+    }
+
+    public String getUsername() {
+        return credentials.get().getUsername();
+    }
+
+    @Override
+    public void setUsername(String username) {
+        credentials.updateAndGet(current -> Credentials.of(username, current.getPassword()));
+    }
+
+    /**
+     * Atomically set the default username and password to use for DataSource.getConnection(username, password) calls.
+     *
+     * @param credentials the username and password pair
+     */
+    @Override
+    public void setCredentials(Credentials credentials) {
+        this.credentials.set(credentials);
+    }
+
+    /**
+     * Atomically get the default username and password to use for DataSource.getConnection(username, password) calls.
+     *
+     * @return the username and password pair
+     */
+    public Credentials getCredentials() {
+        return credentials.get();
     }
 
     @Override
@@ -506,12 +548,27 @@ public class HikariConfig implements HikariConfigMXBean {
                     + " in either of HikariConfig class loader or Thread context classloader");
         }
 
+        if (!SQLExceptionOverride.class.isAssignableFrom(overrideClass)) {
+            throw new RuntimeException("Loaded SQLExceptionOverride class " + exceptionOverrideClassName + " does not implement " + SQLExceptionOverride.class.getName());
+        }
+
         try {
-            overrideClass.getConstructor().newInstance();
+            exceptionOverride = (SQLExceptionOverride) overrideClass.getConstructor().newInstance();
             this.exceptionOverrideClassName = exceptionOverrideClassName;
         } catch (Exception ex) {
             throw new RuntimeException("Failed to instantiate class " + exceptionOverrideClassName, ex);
         }
+    }
+
+    /**
+     * Set the user supplied SQLExceptionOverride instance.
+     *
+     * @param exceptionOverride the user supplied SQLExceptionOverride instance
+     * @see SQLExceptionOverride
+     */
+    public void setExceptionOverride(SQLExceptionOverride exceptionOverride) {
+        checkIfSealed();
+        this.exceptionOverride = exceptionOverride;
     }
 
     /**
@@ -545,16 +602,18 @@ public class HikariConfig implements HikariConfigMXBean {
      *
      * @param other Other {@link HikariConfig} to copy the state to.
      */
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public void copyStateTo(HikariConfig other) {
         for (Field field : HikariConfig.class.getDeclaredFields()) {
-            if (!Modifier.isFinal(field.getModifiers())) {
-                field.setAccessible(true);
-
-                try {
+            try {
+                if (!Modifier.isFinal(field.getModifiers())) {
+                    field.setAccessible(true);
                     field.set(other, field.get(this));
-                } catch (Exception ex) {
-                    throw new RuntimeException("Failed to copy HikariConfig state: " + ex.getMessage(), ex);
+                } else if (field.getType().isAssignableFrom(AtomicReference.class)) {
+                    ((AtomicReference) field.get(other)).set(((AtomicReference) field.get(this)).get());
                 }
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to copy HikariConfig state: " + e.getMessage(), e);
             }
         }
 
@@ -565,18 +624,18 @@ public class HikariConfig implements HikariConfigMXBean {
     //                          Private methods
     // ***********************************************************************
 
-    private @Nullable Class<?> attemptFromContextLoader(String driverClassName) {
+    private @Nullable Class<?> attemptFromContextLoader(String className) {
         ClassLoader threadContextClassLoader = Thread.currentThread().getContextClassLoader();
 
         if (threadContextClassLoader != null) {
             try {
-                Class<?> driverClass = threadContextClassLoader.loadClass(driverClassName);
-                log.debug("Driver class {} found in Thread context class loader {}",
-                        driverClassName, threadContextClassLoader);
+                Class<?> driverClass = threadContextClassLoader.loadClass(className);
+                log.debug("Class {} found in Thread context class loader {}",
+                        className, threadContextClassLoader);
                 return driverClass;
             } catch (ClassNotFoundException ex) {
-                log.debug("Driver class {} not found in Thread context class loader {}, trying classloader {}",
-                        driverClassName, threadContextClassLoader, getClass().getClassLoader());
+                log.debug("Class {} not found in Thread context class loader {}, trying classloader {}",
+                        className, threadContextClassLoader, getClass().getClassLoader());
             }
         }
         return null;

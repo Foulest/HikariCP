@@ -97,7 +97,7 @@ public final class JavassistProxyFactory {
         CtClass superCt = classPool.getCtClass(superClassName);
 
         CtClass targetCt = classPool.makeClass(newClassName, superCt);
-        targetCt.setModifiers(Modifier.setPublic(Modifier.FINAL));
+        targetCt.setModifiers(Modifier.PUBLIC);
 
         log.debug("Generating {}", newClassName);
 

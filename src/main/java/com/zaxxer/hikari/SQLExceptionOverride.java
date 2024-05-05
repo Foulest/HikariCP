@@ -28,4 +28,8 @@ public interface SQLExceptionOverride {
     default Override adjudicate(SQLException ignored) {
         return Override.CONTINUE_EVICT;
     }
+
+    default boolean adjudicateAnyway() {
+        return false;
+    }
 }
