@@ -322,11 +322,20 @@ abstract class PoolBase {
                     credentials.getUsername(), credentials.getPassword());
 
         } else if (dataSourceJNDI != null && ds == null) {
+            InitialContext ic = null;
             try {
-                InitialContext ic = new InitialContext();
+                ic = new InitialContext();
                 ds = (DataSource) ic.lookup(dataSourceJNDI);
             } catch (NamingException ex) {
                 throw new HikariPool.PoolInitializationException(ex);
+            } finally {
+                if (ic != null) {
+                    try {
+                        ic.close();
+                    } catch (NamingException ex) {
+                        ex.printStackTrace();
+                    }
+                }
             }
         }
 

@@ -481,7 +481,7 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, Conc
                 lastConnectionFailure.set(ex);
             }
 
-        } catch (Exception ex) {
+        } catch (SQLException ex) {
             // we check POOL_NORMAL to avoid a flood of messages if shutdown() is running concurrently
             if (poolState == POOL_NORMAL) {
                 log.debug("{} - Cannot acquire connection from data source", poolName, ex);

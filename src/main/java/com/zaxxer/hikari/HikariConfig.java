@@ -23,6 +23,7 @@ import com.zaxxer.hikari.metrics.MetricsTrackerFactory;
 import com.zaxxer.hikari.util.Credentials;
 import com.zaxxer.hikari.util.PropertyElf;
 import com.zaxxer.hikari.util.UtilityElf;
+import lombok.Cleanup;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -885,11 +886,21 @@ public class HikariConfig implements HikariConfigMXBean {
 
     private static Object getObjectOrPerformJndiLookup(Object object) {
         if (object instanceof String) {
+            Context initCtx = null;
+
             try {
-                Context initCtx = new InitialContext();
+                initCtx = new InitialContext();
                 return initCtx.lookup((String) object);
             } catch (NamingException ex) {
                 throw new IllegalArgumentException(ex);
+            } finally {
+                if (initCtx != null) {
+                    try {
+                        initCtx.close();
+                    } catch (NamingException ex) {
+                        ex.printStackTrace();
+                    }
+                }
             }
         }
         return object;
