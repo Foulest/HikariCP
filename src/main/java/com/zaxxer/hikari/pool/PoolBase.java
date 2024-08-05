@@ -32,13 +32,17 @@ import org.jetbrains.annotations.NotNull;
 import javax.management.*;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
+import javax.sql.CommonDataSource;
 import javax.sql.DataSource;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.lang.management.ManagementFactory;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLTransientConnectionException;
 import java.sql.Statement;
-import java.util.Properties;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -310,7 +314,7 @@ abstract class PoolBase {
         String dsClassName = config.getDataSourceClassName();
         String driverClassName = config.getDriverClassName();
         String dataSourceJNDI = config.getDataSourceJNDI();
-        Properties dataSourceProperties = config.getDataSourceProperties();
+        Map<Object, Object> dataSourceProperties = config.getDataSourceProperties();
         DataSource ds = config.getDataSource();
 
         if (dsClassName != null && ds == null) {
@@ -357,37 +361,63 @@ abstract class PoolBase {
         Connection connection = null;
 
         try {
-            Credentials credentials = config.getCredentials();
-            String username = credentials.getUsername();
-            String password = credentials.getPassword();
-
-            connection = (username == null)
-                    ? unwrappedDataSource.getConnection()
-                    : unwrappedDataSource.getConnection(username, password);
-
-            if (connection == null) {
-                throw new SQLTransientConnectionException("DataSource returned null unexpectedly");
-            }
-
+            connection = createConnection();
             setupConnection(connection);
             lastConnectionFailure.set(null);
             return connection;
-
         } catch (SQLTransientConnectionException | ConnectionSetupException ex) {
-            if (connection != null) {
-                quietlyCloseConnection(connection, "(Failed to create/setup connection)");
-            } else if (getLastConnectionFailure() == null) {
-                log.debug("{} - Failed to create/setup connection: {}", poolName, ex.getMessage());
-            }
-
-            lastConnectionFailure.set(ex);
+            handleConnectionException(connection, ex);
             throw ex;
-
         } finally {
-            // tracker will be null during failFast check
-            if (metricsTracker != null) {
-                metricsTracker.recordConnectionCreated(ClockSource.elapsedMillis(start));
-            }
+            recordMetrics(start);
+        }
+    }
+
+    /**
+     * Create a new connection using the data source and credentials.
+     *
+     * @return a new Connection
+     * @throws SQLException if a database access error occurs
+     */
+    private @NotNull Connection createConnection() throws SQLException {
+        Credentials credentials = config.getCredentials();
+        String username = credentials.getUsername();
+        String password = credentials.getPassword();
+
+        Connection connection = (username == null)
+                ? unwrappedDataSource.getConnection()
+                : unwrappedDataSource.getConnection(username, password);
+
+        if (connection == null) {
+            throw new SQLTransientConnectionException("DataSource returned null unexpectedly");
+        }
+        return connection;
+    }
+
+    /**
+     * Handle exceptions that occur during connection setup.
+     *
+     * @param connection the connection that was attempted to be created
+     * @param ex the exception that was thrown
+     */
+    private void handleConnectionException(Connection connection, Exception ex) {
+        if (connection != null) {
+            quietlyCloseConnection(connection, "(Failed to create/setup connection)");
+        } else if (getLastConnectionFailure() == null) {
+            log.debug("{} - Failed to create/setup connection: {}", poolName, ex.getMessage());
+        }
+
+        lastConnectionFailure.set(ex);
+    }
+
+    /**
+     * Record metrics for connection creation time.
+     *
+     * @param start the start time of the connection creation
+     */
+    private void recordMetrics(long start) {
+        if (metricsTracker != null) {
+            metricsTracker.recordConnectionCreated(ClockSource.elapsedMillis(start));
         }
     }
 
@@ -608,7 +638,7 @@ abstract class PoolBase {
      *
      * @param dataSource the DataSource
      */
-    private void setLoginTimeout(DataSource dataSource) {
+    private void setLoginTimeout(CommonDataSource dataSource) {
         if (connectionTimeout != Integer.MAX_VALUE) {
             try {
                 dataSource.setLoginTimeout(Math.max(1, (int) TimeUnit.MILLISECONDS.toSeconds(500L + connectionTimeout)));
@@ -652,6 +682,14 @@ abstract class PoolBase {
 
         ConnectionSetupException(Throwable ex) {
             super(ex);
+        }
+
+        private void writeObject(@NotNull ObjectOutputStream out) throws IOException {
+            out.defaultWriteObject();
+        }
+
+        private void readObject(@NotNull ObjectInputStream in) throws IOException, ClassNotFoundException {
+            in.defaultReadObject();
         }
     }
 

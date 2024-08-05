@@ -30,6 +30,9 @@ import org.hibernate.service.spi.Stoppable;
 import org.jetbrains.annotations.NotNull;
 
 import javax.sql.DataSource;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Map;
@@ -40,7 +43,7 @@ import java.util.Map;
  * @author Brett Wooldridge, Luca Burgazzoli
  */
 @Slf4j
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "WeakerAccess"})
 public class HikariConnectionProvider implements ConnectionProvider, Configurable, Stoppable {
 
     private static final long serialVersionUID = -9131625057941275711L;
@@ -126,5 +129,13 @@ public class HikariConnectionProvider implements ConnectionProvider, Configurabl
     @Override
     public void stop() {
         dataSource.close();
+    }
+
+    private void writeObject(@NotNull ObjectOutputStream out) throws IOException {
+        out.defaultWriteObject();
+    }
+
+    private void readObject(@NotNull ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
     }
 }

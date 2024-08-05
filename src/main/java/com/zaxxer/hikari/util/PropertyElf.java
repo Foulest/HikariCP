@@ -42,7 +42,7 @@ public final class PropertyElf {
 
     private static final Pattern GETTER_PATTERN = Pattern.compile("(get|is)[A-Z].+");
 
-    public static void setTargetFromProperties(Object target, Properties properties) {
+    public static void setTargetFromProperties(Object target, Map<Object, Object> properties) {
         if (target == null || properties == null) {
             return;
         }
@@ -100,14 +100,14 @@ public final class PropertyElf {
         }
     }
 
-    public static @NotNull Properties copyProperties(@NotNull Properties props) {
+    public static @NotNull Properties copyProperties(@NotNull Map<Object, Object> properties) {
         Properties copy = new Properties();
-        props.forEach((key, value) -> copy.setProperty(key.toString(), value.toString()));
+        properties.forEach((key, value) -> copy.setProperty(key.toString(), value.toString()));
         return copy;
     }
 
     private static void setProperty(Object target, @NotNull String propName,
-                                    Object propValue, @NotNull List<Method> methods) {
+                                    Object propValue, @NotNull Collection<Method> methods) {
         String methodName = "set" + propName.substring(0, 1).toUpperCase(Locale.ROOT) + propName.substring(1);
 
         Method writeMethod = methods.stream().filter(m -> m.getName().equals(methodName)

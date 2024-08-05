@@ -23,7 +23,6 @@ import com.zaxxer.hikari.metrics.MetricsTrackerFactory;
 import com.zaxxer.hikari.util.Credentials;
 import com.zaxxer.hikari.util.PropertyElf;
 import com.zaxxer.hikari.util.UtilityElf;
-import lombok.Cleanup;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +43,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.AccessControlException;
 import java.sql.Connection;
+import java.util.Map;
 import java.util.Properties;
 import java.util.TreeSet;
 import java.util.concurrent.ScheduledExecutorService;
@@ -105,13 +105,13 @@ public class HikariConfig implements HikariConfigMXBean {
     private boolean registerMbeans;
     private boolean allowPoolSuspension;
     private DataSource dataSource;
-    private final Properties dataSourceProperties;
+    private final Map<Object, Object> dataSourceProperties;
     private ThreadFactory threadFactory;
     private ScheduledExecutorService scheduledExecutor;
     private MetricsTrackerFactory metricsTrackerFactory;
     private Object metricRegistry;
     private Object healthCheckRegistry;
-    private final Properties healthCheckProperties;
+    private final Map<Object, Object> healthCheckProperties;
     private long keepaliveTime;
 
     private volatile boolean sealed;
@@ -145,7 +145,7 @@ public class HikariConfig implements HikariConfigMXBean {
      *
      * @param properties the name of the property file
      */
-    public HikariConfig(Properties properties) {
+    public HikariConfig(Map<Object, Object> properties) {
         this();
         PropertyElf.setTargetFromProperties(this, properties);
     }
@@ -318,9 +318,9 @@ public class HikariConfig implements HikariConfigMXBean {
         dataSourceJNDI = jndiDataSource;
     }
 
-    public void setDataSourceProperties(Properties dsProperties) {
+    public void setDataSourceProperties(Map<Object, Object> properties) {
         checkIfSealed();
-        dataSourceProperties.putAll(dsProperties);
+        dataSourceProperties.putAll(properties);
     }
 
     public void setDriverClassName(String driverClassName) {
@@ -479,14 +479,14 @@ public class HikariConfig implements HikariConfigMXBean {
         this.healthCheckRegistry = healthCheckRegistry;
     }
 
-    public void setHealthCheckProperties(Properties healthCheckProperties) {
+    public void setHealthCheckProperties(Map<Object, Object> properties) {
         checkIfSealed();
-        this.healthCheckProperties.putAll(healthCheckProperties);
+        healthCheckProperties.putAll(properties);
     }
 
     public void addHealthCheckProperty(String key, String value) {
         checkIfSealed();
-        healthCheckProperties.setProperty(key, value);
+        healthCheckProperties.put(key, value);
     }
 
     /**

@@ -33,6 +33,7 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Logger;
 
 /**
  * The HikariCP pooled DataSource.
@@ -135,7 +136,7 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
 
     @Override
     public Connection getConnection(String username, String password) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        throw new SQLFeatureNotSupportedException("HikariDataSource.getConnection is not supported");
     }
 
     @Override
@@ -169,8 +170,8 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
     }
 
     @Override
-    public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException {
-        throw new SQLFeatureNotSupportedException();
+    public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+        throw new SQLFeatureNotSupportedException("HikariDataSource.getParentLogger is not supported");
     }
 
     @Override
@@ -312,10 +313,13 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
      * @param connection the connection to evict from the pool
      */
     public void evictConnection(Connection connection) {
-        HikariPool hikariPool;
+        if (isClosed()) {
+            return;
+        }
 
-        if (!isClosed() && (hikariPool = pool.get()) != null
-                && connection.getClass().getName().startsWith("com.zaxxer.hikari")) {
+        HikariPool hikariPool = pool.get();
+
+        if (hikariPool != null && connection.getClass().getName().startsWith("com.zaxxer.hikari")) {
             hikariPool.evictConnection(connection);
         }
     }

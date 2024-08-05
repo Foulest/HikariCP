@@ -29,7 +29,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Properties;
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
 
@@ -60,16 +60,16 @@ public final class CodahaleHealthChecker {
     public static void registerHealthChecks(HikariPool pool,
                                             @NotNull HikariConfig hikariConfig,
                                             @NotNull HealthCheckRegistry registry) {
-        Properties healthCheckProperties = hikariConfig.getHealthCheckProperties();
+        Map<Object, Object> healthCheckProperties = hikariConfig.getHealthCheckProperties();
         MetricRegistry metricRegistry = (MetricRegistry) hikariConfig.getMetricRegistry();
 
-        long checkTimeoutMs = Long.parseLong(healthCheckProperties.getProperty("connectivityCheckTimeoutMs",
+        long checkTimeoutMs = Long.parseLong((String) healthCheckProperties.getOrDefault("connectivityCheckTimeoutMs",
                 String.valueOf(hikariConfig.getConnectionTimeout())));
 
         registry.register(MetricRegistry.name(hikariConfig.getPoolName(), "pool", "ConnectivityCheck"),
                 new ConnectivityHealthCheck(pool, checkTimeoutMs));
 
-        long expected99thPercentile = Long.parseLong(healthCheckProperties.getProperty(
+        long expected99thPercentile = Long.parseLong((String) healthCheckProperties.getOrDefault(
                 "expected99thPercentileMs", "0"));
 
         if (metricRegistry != null && expected99thPercentile > 0) {

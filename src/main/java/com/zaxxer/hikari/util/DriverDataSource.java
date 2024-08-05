@@ -42,7 +42,8 @@ public final class DriverDataSource implements DataSource {
     private Driver driver;
 
     public DriverDataSource(String jdbcUrl, String driverClassName,
-                            @NotNull Properties properties, String username, String password) {
+                            @NotNull Map<Object, Object> properties,
+                            String username, String password) {
         this.jdbcUrl = jdbcUrl;
         driverProperties = new Properties();
 
@@ -162,12 +163,12 @@ public final class DriverDataSource implements DataSource {
 
     @Override
     public PrintWriter getLogWriter() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        throw new SQLFeatureNotSupportedException("DriverDataSource.getLogWriter is not supported");
     }
 
     @Override
     public void setLogWriter(PrintWriter logWriter) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        throw new SQLFeatureNotSupportedException("DriverDataSource.setLogWriter is not supported");
     }
 
     @Override
@@ -187,7 +188,7 @@ public final class DriverDataSource implements DataSource {
 
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        throw new SQLFeatureNotSupportedException("DriverDataSource.unwrap is not supported");
     }
 
     @Override

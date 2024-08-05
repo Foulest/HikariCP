@@ -189,7 +189,6 @@ public final class UtilityElf {
                             return iso.getLevelId();
                         }
                     }
-
                     throw new IllegalArgumentException("Invalid transaction isolation value: " + transactionIsolationName);
                 } catch (NumberFormatException nfe) {
                     throw new IllegalArgumentException("Invalid transaction isolation value: " + transactionIsolationName, nfe);

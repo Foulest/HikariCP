@@ -41,6 +41,9 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLTransientConnectionException;
@@ -73,8 +76,8 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, Conc
     private static final String EVICTED_CONNECTION_MESSAGE = "(connection was evicted)";
     private static final String DEAD_CONNECTION_MESSAGE = "(connection is dead)";
 
-    private final PoolEntryCreator poolEntryCreator = new PoolEntryCreator(null /*logging prefix*/);
-    private final PoolEntryCreator postFillPoolEntryCreator = new PoolEntryCreator("After adding ");
+    private final Callable<Boolean> poolEntryCreator = new PoolEntryCreator(null /*logging prefix*/);
+    private final Callable<Boolean> postFillPoolEntryCreator = new PoolEntryCreator("After adding ");
     private final Collection<Runnable> addConnectionQueueReadOnlyView;
     private final ThreadPoolExecutor addConnectionExecutor;
     private final ThreadPoolExecutor closeConnectionExecutor;
@@ -511,14 +514,14 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, Conc
     /**
      * Attempt to abort or close active connections.
      *
-     * @param assassinExecutor the ExecutorService to pass to Connection.abort()
+     * @param executor the ExecutorService to pass to Connection.abort()
      */
-    private void abortActiveConnections(ExecutorService assassinExecutor) {
+    private void abortActiveConnections(Executor executor) {
         for (PoolEntry poolEntry : connectionBag.values(ConcurrentBag.IConcurrentBagEntry.STATE_IN_USE)) {
             Connection connection = poolEntry.close();
 
             try {
-                connection.abort(assassinExecutor);
+                connection.abort(executor);
             } catch (SQLException ex) {
                 quietlyCloseConnection(connection, "(connection aborted during shutdown)");
             } finally {
@@ -858,6 +861,14 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, Conc
          */
         public PoolInitializationException(Throwable ex) {
             super("Failed to initialize pool: " + ex.getMessage(), ex);
+        }
+
+        private void writeObject(@NotNull ObjectOutputStream out) throws IOException {
+            out.defaultWriteObject();
+        }
+
+        private void readObject(@NotNull ObjectInputStream in) throws IOException, ClassNotFoundException {
+            in.defaultReadObject();
         }
     }
 }

@@ -21,6 +21,7 @@ package com.zaxxer.hikari.pool;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 /**
  * This is the proxy class for java.sql.PreparedStatement.
@@ -29,7 +30,7 @@ import java.sql.SQLException;
  */
 public abstract class ProxyPreparedStatement extends ProxyStatement implements PreparedStatement {
 
-    ProxyPreparedStatement(ProxyConnection connection, PreparedStatement statement) {
+    ProxyPreparedStatement(ProxyConnection connection, Statement statement) {
         super(connection, statement);
     }
 

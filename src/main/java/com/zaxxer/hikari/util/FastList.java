@@ -22,7 +22,7 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.Serializable;
+import java.io.*;
 import java.lang.reflect.Array;
 import java.util.*;
 import java.util.function.Consumer;
@@ -217,7 +217,7 @@ public final class FastList<T> implements List<T>, RandomAccess, Serializable {
 
     @Override
     public boolean contains(Object o) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.contains is not supported");
     }
 
     @Override
@@ -245,99 +245,99 @@ public final class FastList<T> implements List<T>, RandomAccess, Serializable {
 
     @Override
     public Object @NotNull [] toArray() {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.toArray is not supported");
     }
 
     @Override
     public <E> E @NotNull [] toArray(E @NotNull [] a) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.toArray is not supported");
     }
 
     @Override
     public boolean containsAll(@NotNull Collection<?> c) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.containsAll is not supported");
     }
 
     @Override
     public boolean addAll(@NotNull Collection<? extends T> c) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.addAll is not supported");
     }
 
     @Override
     public boolean addAll(int index, @NotNull Collection<? extends T> c) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.addAll is not supported");
     }
 
     @Override
     public boolean removeAll(@NotNull Collection<?> c) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.removeAll is not supported");
     }
 
     @Override
     public boolean retainAll(@NotNull Collection<?> c) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.retainAll is not supported");
     }
 
     @Override
     public void add(int index, T element) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.add is not supported");
     }
 
     @Override
     public int indexOf(Object o) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.indexOf is not supported");
     }
 
     @Override
     public int lastIndexOf(Object o) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.lastIndexOf is not supported");
     }
 
     @Override
     public @NotNull ListIterator<T> listIterator() {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.listIterator is not supported");
     }
 
     @Override
     public @NotNull ListIterator<T> listIterator(int index) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.listIterator is not supported");
     }
 
     @Override
     public @NotNull List<T> subList(int fromIndex, int toIndex) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.subList is not supported");
     }
 
     @Override
     public void forEach(Consumer<? super T> action) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.forEach is not supported");
     }
 
     @Override
     public Spliterator<T> spliterator() {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.spliterator is not supported");
     }
 
     @Override
     public boolean removeIf(Predicate<? super T> filter) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.removeIf is not supported");
     }
 
     @Override
     public void replaceAll(UnaryOperator<T> operator) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.replaceAll is not supported");
     }
 
     @Override
     public void sort(Comparator<? super T> c) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("FastList.sort is not supported");
     }
 
-    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
-        throw new java.io.NotSerializableException("com.zaxxer.hikari.util.FastList");
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        throw new NotSerializableException("FastList.readObject is not serializable");
     }
 
-    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
-        throw new java.io.NotSerializableException("com.zaxxer.hikari.util.FastList");
+    private void writeObject(ObjectOutputStream out) throws IOException {
+        throw new NotSerializableException("FastList.writeObject is not serializable");
     }
 }
