@@ -27,8 +27,6 @@ import io.prometheus.client.CollectorRegistry;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.zaxxer.hikari.metrics.prometheus.PrometheusMetricsTrackerFactory.RegistrationStatus.REGISTERED;
-
 /**
  * <pre>{@code
  * HikariConfig config = new HikariConfig();
@@ -42,10 +40,10 @@ import static com.zaxxer.hikari.metrics.prometheus.PrometheusMetricsTrackerFacto
  * Note: the internal {@see io.prometheus.client.Summary} requires heavy locks. Consider using
  * {@see PrometheusHistogramMetricsTrackerFactory} if performance plays a role and you don't need the summary per se.
  */
-@SuppressWarnings("unused")
-public class PrometheusMetricsTrackerFactory implements MetricsTrackerFactory {
+@SuppressWarnings({"unused", "WeakerAccess"})
+class PrometheusMetricsTrackerFactory implements MetricsTrackerFactory {
 
-    private final static Map<CollectorRegistry, RegistrationStatus> registrationStatuses = new ConcurrentHashMap<>();
+    private static final Map<CollectorRegistry, RegistrationStatus> registrationStatuses = new ConcurrentHashMap<>();
 
     private final HikariCPCollector collector = new HikariCPCollector();
     private final CollectorRegistry collectorRegistry;
@@ -58,7 +56,7 @@ public class PrometheusMetricsTrackerFactory implements MetricsTrackerFactory {
      * Default Constructor. The Hikari metrics are registered to the default
      * collector registry ({@code CollectorRegistry.defaultRegistry}).
      */
-    public PrometheusMetricsTrackerFactory() {
+    PrometheusMetricsTrackerFactory() {
         this(CollectorRegistry.defaultRegistry);
     }
 
@@ -66,7 +64,7 @@ public class PrometheusMetricsTrackerFactory implements MetricsTrackerFactory {
      * Constructor that allows to pass in a {@link CollectorRegistry} to which the
      * Hikari metrics are registered.
      */
-    public PrometheusMetricsTrackerFactory(CollectorRegistry collectorRegistry) {
+    PrometheusMetricsTrackerFactory(CollectorRegistry collectorRegistry) {
         this.collectorRegistry = collectorRegistry;
     }
 
@@ -77,8 +75,8 @@ public class PrometheusMetricsTrackerFactory implements MetricsTrackerFactory {
         return new PrometheusMetricsTracker(poolName, collectorRegistry, collector);
     }
 
-    private void registerCollector(Collector collector, CollectorRegistry collectorRegistry) {
-        if (registrationStatuses.putIfAbsent(collectorRegistry, REGISTERED) == null) {
+    private static void registerCollector(Collector collector, CollectorRegistry collectorRegistry) {
+        if (registrationStatuses.putIfAbsent(collectorRegistry, RegistrationStatus.REGISTERED) == null) {
             collector.register(collectorRegistry);
         }
     }

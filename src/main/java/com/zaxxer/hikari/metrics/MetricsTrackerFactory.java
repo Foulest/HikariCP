@@ -18,6 +18,7 @@
  */
 package com.zaxxer.hikari.metrics;
 
+@FunctionalInterface
 public interface MetricsTrackerFactory {
 
     /**

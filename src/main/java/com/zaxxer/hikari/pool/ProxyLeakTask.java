@@ -48,14 +48,17 @@ class ProxyLeakTask implements Runnable {
         NO_LEAK = new ProxyLeakTask() {
             @Override
             void schedule(@NotNull ScheduledExecutorService executorService, long leakDetectionThreshold) {
+                // Do nothing
             }
 
             @Override
             public void run() {
+                // Do nothing
             }
 
             @Override
             public void cancel() {
+                // Do nothing
             }
         };
     }

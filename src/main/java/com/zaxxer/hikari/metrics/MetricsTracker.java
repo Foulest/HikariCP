@@ -18,12 +18,15 @@
  */
 package com.zaxxer.hikari.metrics;
 
+import lombok.NoArgsConstructor;
+
 /**
  * This class only supports realtime, not historical metrics.
  *
  * @author Brett Wooldridge
  */
 @Deprecated
+@NoArgsConstructor
 public class MetricsTracker implements IMetricsTracker {
 
 }

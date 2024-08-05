@@ -21,6 +21,7 @@ package com.zaxxer.hikari.metrics.prometheus;
 import com.zaxxer.hikari.metrics.PoolStats;
 import io.prometheus.client.Collector;
 import io.prometheus.client.GaugeMetricFamily;
+import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -28,8 +29,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
+import java.util.function.ToIntFunction;
 
+@NoArgsConstructor
 class HikariCPCollector extends Collector {
 
     private static final List<String> LABEL_NAMES = Collections.singletonList("pool");
@@ -57,12 +59,12 @@ class HikariCPCollector extends Collector {
     }
 
     private @NotNull GaugeMetricFamily createGauge(String metric, String help,
-                                                   Function<PoolStats, Integer> metricValueFunction) {
+                                                   ToIntFunction<PoolStats> metricValueFunction) {
         GaugeMetricFamily metricFamily = new GaugeMetricFamily(metric, help, LABEL_NAMES);
 
         poolStatsMap.forEach((k, v) -> metricFamily.addMetric(
                 Collections.singletonList(k),
-                metricValueFunction.apply(v)
+                metricValueFunction.applyAsInt(v)
         ));
         return metricFamily;
     }

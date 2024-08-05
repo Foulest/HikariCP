@@ -45,8 +45,8 @@ public class HikariConnectionProvider implements ConnectionProvider, Configurabl
 
     private static final long serialVersionUID = -9131625057941275711L;
 
-    private HikariConfig config;
-    private HikariDataSource dataSource;
+    private transient HikariConfig config;
+    private transient HikariDataSource dataSource;
 
     public HikariConnectionProvider() {
         config = null;
@@ -64,14 +64,15 @@ public class HikariConnectionProvider implements ConnectionProvider, Configurabl
     // *************************************************************************
 
     @Override
-    public void configure(@NotNull Map props) throws HibernateException {
+    public void configure(@NotNull Map props) {
         try {
             log.debug("Configuring HikariCP");
             config = HikariConfigurationUtil.loadConfiguration(props);
             dataSource = new HikariDataSource(config);
-        } catch (Exception ex) {
+        } catch (RuntimeException ex) {
             throw new HibernateException(ex);
         }
+
         log.debug("HikariCP Configured");
     }
 

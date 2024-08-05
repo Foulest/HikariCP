@@ -22,18 +22,21 @@ import com.codahale.metrics.health.HealthCheckRegistry;
 import com.zaxxer.hikari.metrics.MetricsTrackerFactory;
 import com.zaxxer.hikari.util.Credentials;
 import com.zaxxer.hikari.util.PropertyElf;
+import com.zaxxer.hikari.util.UtilityElf;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,36 +44,31 @@ import java.nio.file.Paths;
 import java.security.AccessControlException;
 import java.sql.Connection;
 import java.util.Properties;
-import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static com.zaxxer.hikari.util.UtilityElf.getNullIfEmpty;
-import static com.zaxxer.hikari.util.UtilityElf.safeIsAssignableFrom;
-import static java.util.concurrent.TimeUnit.MINUTES;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 @Slf4j
 @Getter
 @Setter
-@SuppressWarnings({"SameParameterValue", "unused"})
+@SuppressWarnings({"SameParameterValue", "unused", "WeakerAccess"})
 public class HikariConfig implements HikariConfigMXBean {
 
     private static final char[] ID_CHARACTERS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray();
-    private static final long CONNECTION_TIMEOUT = SECONDS.toMillis(30);
-    private static final long VALIDATION_TIMEOUT = SECONDS.toMillis(5);
+    private static final long CONNECTION_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
+    private static final long VALIDATION_TIMEOUT = TimeUnit.SECONDS.toMillis(5);
     private static final long SOFT_TIMEOUT_FLOOR = Long.getLong("com.zaxxer.hikari.timeoutMs.floor", 250L);
-    private static final long IDLE_TIMEOUT = MINUTES.toMillis(10);
-    private static final long MAX_LIFETIME = MINUTES.toMillis(30);
+    private static final long IDLE_TIMEOUT = TimeUnit.MINUTES.toMillis(10);
+    private static final long MAX_LIFETIME = TimeUnit.MINUTES.toMillis(30);
     private static final double DEFAULT_MAX_LIFETIME_VARIANCE = 2.5;
     private static final long DEFAULT_KEEPALIVE_TIME = 0L;
-    private static final long MIN_LIFETIME = SECONDS.toMillis(30);
+    private static final long MIN_LIFETIME = TimeUnit.SECONDS.toMillis(30);
     private static final long MIN_KEEPALIVE_TIME = MIN_LIFETIME; // Assuming the same minimum as lifetime for simplicity
-    private static final long MIN_LEAK_DETECTION_THRESHOLD = SECONDS.toMillis(2);
+    private static final long MIN_LEAK_DETECTION_THRESHOLD = TimeUnit.SECONDS.toMillis(2);
     private static final int DEFAULT_POOL_SIZE = 10;
     private static final int MINIMUM_POOL_SIZE = 1;
     private static final String POOL_NAME_PREFIX = "HikariPool-";
@@ -152,7 +150,7 @@ public class HikariConfig implements HikariConfigMXBean {
     }
 
     /**
-     * Construct a HikariConfig from the specified property file name.  <code>propertyFileName</code>
+     * Construct a HikariConfig from the specified property file name.  {@code propertyFileName}
      * will first be treated as a path in the file-system, and if that fails the
      * Class.getResourceAsStream(propertyFileName) will be tried.
      *
@@ -253,7 +251,7 @@ public class HikariConfig implements HikariConfigMXBean {
 
     /**
      * Set the SQL query to be executed to test the validity of connections. Using
-     * the JDBC4 <code>Connection.isValid()</code> method to test connection validity can
+     * the JDBC4 {@code Connection.isValid()} method to test connection validity can
      * be more efficient on some databases and is recommended.
      *
      * @param connectionTestQuery a SQL query string
@@ -347,7 +345,8 @@ public class HikariConfig implements HikariConfigMXBean {
         try {
             driverClass.getConstructor().newInstance();
             this.driverClassName = driverClassName;
-        } catch (Exception ex) {
+        } catch (IllegalAccessException | InvocationTargetException
+                 | InstantiationException | NoSuchMethodException ex) {
             throw new RuntimeException("Failed to instantiate class " + driverClassName, ex);
         }
     }
@@ -381,7 +380,7 @@ public class HikariConfig implements HikariConfigMXBean {
 
     /**
      * Set the pool initialization failure timeout.  This setting applies to pool
-     * initialization when {@link HikariDataSource} is constructed with a {@link HikariConfig},
+     * initialization when {@link HikariDataSource} is constructed with a ,
      * or when {@link HikariDataSource} is constructed using the no-arg constructor
      * and {@link HikariDataSource#getConnection()} is called.
      * <ul>
@@ -448,8 +447,8 @@ public class HikariConfig implements HikariConfigMXBean {
         if (metricRegistry != null) {
             metricRegistry = getObjectOrPerformJndiLookup(metricRegistry);
 
-            if (!safeIsAssignableFrom(metricRegistry, "com.codahale.metrics.MetricRegistry")
-                    && !(safeIsAssignableFrom(metricRegistry, "io.micrometer.core.instrument.MeterRegistry"))) {
+            if (!UtilityElf.safeIsAssignableFrom(metricRegistry, "com.codahale.metrics.MetricRegistry")
+                    && !(UtilityElf.safeIsAssignableFrom(metricRegistry, "io.micrometer.core.instrument.MeterRegistry"))) {
                 throw new IllegalArgumentException("Class must be instance of com.codahale.metrics.MetricRegistry"
                         + " or io.micrometer.core.instrument.MeterRegistry");
             }
@@ -567,13 +566,15 @@ public class HikariConfig implements HikariConfigMXBean {
         }
 
         if (!SQLExceptionOverride.class.isAssignableFrom(overrideClass)) {
-            throw new RuntimeException("Loaded SQLExceptionOverride class " + exceptionOverrideClassName + " does not implement " + SQLExceptionOverride.class.getName());
+            throw new RuntimeException("Loaded SQLExceptionOverride class " + exceptionOverrideClassName
+                    + " does not implement " + SQLExceptionOverride.class.getName());
         }
 
         try {
             exceptionOverride = (SQLExceptionOverride) overrideClass.getConstructor().newInstance();
             this.exceptionOverrideClassName = exceptionOverrideClassName;
-        } catch (Exception ex) {
+        } catch (IllegalAccessException | InvocationTargetException | SecurityException
+                 | NoSuchMethodException | InstantiationException | IllegalArgumentException ex) {
             throw new RuntimeException("Failed to instantiate class " + exceptionOverrideClassName, ex);
         }
     }
@@ -591,8 +592,8 @@ public class HikariConfig implements HikariConfigMXBean {
 
     /**
      * Set the default transaction isolation level.  The specified value is the
-     * constant name from the <code>Connection</code> class, e.g.
-     * <code>TRANSACTION_REPEATABLE_READ</code>.
+     * constant name from the {@code Connection} class, e.g.
+     * {@code TRANSACTION_REPEATABLE_READ}.
      *
      * @param isolationLevel the name of the isolation level
      */
@@ -618,7 +619,7 @@ public class HikariConfig implements HikariConfigMXBean {
     /**
      * Copies the state of {@code this} into {@code other}.
      *
-     * @param other Other {@link HikariConfig} to copy the state to.
+     * @param other Other  to copy the state to.
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     public void copyStateTo(HikariConfig other) {
@@ -630,8 +631,8 @@ public class HikariConfig implements HikariConfigMXBean {
                 } else if (field.getType().isAssignableFrom(AtomicReference.class)) {
                     ((AtomicReference) field.get(other)).set(((AtomicReference) field.get(this)).get());
                 }
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to copy HikariConfig state: " + e.getMessage(), e);
+            } catch (IllegalAccessException | SecurityException | IllegalArgumentException ex) {
+                throw new RuntimeException("Failed to copy HikariConfig state: " + ex.getMessage(), ex);
             }
         }
 
@@ -669,14 +670,14 @@ public class HikariConfig implements HikariConfigMXBean {
 
         // treat empty property as null
         //noinspection NonAtomicOperationOnVolatileField
-        catalog = getNullIfEmpty(catalog);
-        connectionInitSql = getNullIfEmpty(connectionInitSql);
-        connectionTestQuery = getNullIfEmpty(connectionTestQuery);
-        transactionIsolation = getNullIfEmpty(transactionIsolation);
-        dataSourceClassName = getNullIfEmpty(dataSourceClassName);
-        dataSourceJNDI = getNullIfEmpty(dataSourceJNDI);
-        driverClassName = getNullIfEmpty(driverClassName);
-        jdbcUrl = getNullIfEmpty(jdbcUrl);
+        catalog = UtilityElf.getNullIfEmpty(catalog);
+        connectionInitSql = UtilityElf.getNullIfEmpty(connectionInitSql);
+        connectionTestQuery = UtilityElf.getNullIfEmpty(connectionTestQuery);
+        transactionIsolation = UtilityElf.getNullIfEmpty(transactionIsolation);
+        dataSourceClassName = UtilityElf.getNullIfEmpty(dataSourceClassName);
+        dataSourceJNDI = UtilityElf.getNullIfEmpty(dataSourceJNDI);
+        driverClassName = UtilityElf.getNullIfEmpty(driverClassName);
+        jdbcUrl = UtilityElf.getNullIfEmpty(jdbcUrl);
 
         // Check Data Source Options
         if (dataSource != null) {
@@ -770,11 +771,11 @@ public class HikariConfig implements HikariConfigMXBean {
     }
 
     private long validateIdleTimeout() {
-        if (idleTimeout + SECONDS.toMillis(1) > maxLifetime
+        if (idleTimeout + TimeUnit.SECONDS.toMillis(1) > maxLifetime
                 && maxLifetime > 0 && minimumIdle < maximumPoolSize) {
             log.warn("{} - idleTimeout is close to or more than maxLifetime, disabling it.", poolName);
             return 0;
-        } else if (idleTimeout != 0 && idleTimeout < SECONDS.toMillis(10) && minimumIdle < maximumPoolSize) {
+        } else if (idleTimeout != 0 && idleTimeout < TimeUnit.SECONDS.toMillis(10) && minimumIdle < maximumPoolSize) {
             log.warn("{} - idleTimeout is less than 10000ms, setting to default {}ms.", poolName, IDLE_TIMEOUT);
             return IDLE_TIMEOUT;
         } else if (idleTimeout != IDLE_TIMEOUT && idleTimeout != 0 && minimumIdle == maximumPoolSize) {
@@ -797,14 +798,14 @@ public class HikariConfig implements HikariConfigMXBean {
         }
 
         log.debug("{} - configuration:", poolName);
-        Set<String> propertyNames = new TreeSet<>(PropertyElf.getPropertyNames(HikariConfig.class));
+        Iterable<String> propertyNames = new TreeSet<>(PropertyElf.getPropertyNames(HikariConfig.class));
 
         for (String prop : propertyNames) {
             try {
                 Object value = getMaskedPropertyValue(prop);
                 String formattedProp = String.format("%-32s", prop); // Ensure left-aligned & padded to 32 characters
                 log.debug("{}{}", formattedProp, value);
-            } catch (Exception ignored) {
+            } catch (RuntimeException ignored) {
             }
         }
     }
@@ -847,7 +848,7 @@ public class HikariConfig implements HikariConfigMXBean {
                     }
                     break;
             }
-        } catch (Exception ex) {
+        } catch (RuntimeException ex) {
             value = "error"; // Fallback in case of an error
         }
         return value;
@@ -871,7 +872,7 @@ public class HikariConfig implements HikariConfigMXBean {
         }
     }
 
-    private @NotNull String generatePoolName() {
+    private static @NotNull String generatePoolName() {
         try {
             int nextNum = POOL_NUMBER.incrementAndGet();
             return POOL_NAME_PREFIX + nextNum;
@@ -882,10 +883,10 @@ public class HikariConfig implements HikariConfigMXBean {
         }
     }
 
-    private Object getObjectOrPerformJndiLookup(Object object) {
+    private static Object getObjectOrPerformJndiLookup(Object object) {
         if (object instanceof String) {
             try {
-                InitialContext initCtx = new InitialContext();
+                Context initCtx = new InitialContext();
                 return initCtx.lookup((String) object);
             } catch (NamingException ex) {
                 throw new IllegalArgumentException(ex);

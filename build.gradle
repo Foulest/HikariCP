@@ -96,7 +96,7 @@ tasks {
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            groupId = "com.zaxxer.hikari"
+            groupId = 'com.zaxxer.hikari'
             artifactId = project.name
             version = project.version
 

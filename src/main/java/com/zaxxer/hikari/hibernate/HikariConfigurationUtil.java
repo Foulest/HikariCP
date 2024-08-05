@@ -19,6 +19,8 @@
 package com.zaxxer.hikari.hibernate;
 
 import com.zaxxer.hikari.HikariConfig;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.hibernate.cfg.AvailableSettings;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -31,7 +33,9 @@ import java.util.Properties;
  *
  * @author Brett Wooldridge, Luca Burgazzoli
  */
-public class HikariConfigurationUtil {
+@SuppressWarnings("WeakerAccess")
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+public final class HikariConfigurationUtil {
 
     public static final String CONFIG_PREFIX = "hibernate.hikari.";
 

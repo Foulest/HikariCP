@@ -26,9 +26,6 @@ import io.prometheus.client.Histogram;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.zaxxer.hikari.metrics.prometheus.PrometheusMetricsTrackerFactory.RegistrationStatus;
-import static com.zaxxer.hikari.metrics.prometheus.PrometheusMetricsTrackerFactory.RegistrationStatus.REGISTERED;
-
 /**
  * Alternative Prometheus metrics tracker using a Histogram instead of Summary
  * <p>
@@ -69,7 +66,7 @@ class PrometheusHistogramMetricsTracker implements IMetricsTracker {
                 .create();
     }
 
-    private final static Map<CollectorRegistry, RegistrationStatus> registrationStatuses = new ConcurrentHashMap<>();
+    private static final Map<CollectorRegistry, PrometheusMetricsTrackerFactory.RegistrationStatus> registrationStatuses = new ConcurrentHashMap<>();
 
     private final String poolName;
     private final HikariCPCollector hikariCPCollector;
@@ -89,8 +86,8 @@ class PrometheusHistogramMetricsTracker implements IMetricsTracker {
         elapsedCreationHistogramChild = ELAPSED_CREATION_HISTOGRAM.labels(poolName);
     }
 
-    private void registerMetrics(CollectorRegistry collectorRegistry) {
-        if (registrationStatuses.putIfAbsent(collectorRegistry, REGISTERED) == null) {
+    private static void registerMetrics(CollectorRegistry collectorRegistry) {
+        if (registrationStatuses.putIfAbsent(collectorRegistry, PrometheusMetricsTrackerFactory.RegistrationStatus.REGISTERED) == null) {
             CONNECTION_TIMEOUT_COUNTER.register(collectorRegistry);
             ELAPSED_ACQUIRED_HISTOGRAM.register(collectorRegistry);
             ELAPSED_BORROWED_HISTOGRAM.register(collectorRegistry);

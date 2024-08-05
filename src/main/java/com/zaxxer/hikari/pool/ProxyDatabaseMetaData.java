@@ -30,12 +30,12 @@ public abstract class ProxyDatabaseMetaData implements DatabaseMetaData {
     protected final ProxyConnection connection;
     protected final DatabaseMetaData delegate;
 
-    final SQLException checkException(SQLException ex) {
+    SQLException checkException(SQLException ex) {
         return connection.checkException(ex);
     }
 
     @Override
-    public final @NotNull String toString() {
+    public @NotNull String toString() {
         String delegateToString = delegate.toString();
         return getClass().getSimpleName() + '@' + System.identityHashCode(this) + " wrapping " + delegateToString;
     }
@@ -45,7 +45,7 @@ public abstract class ProxyDatabaseMetaData implements DatabaseMetaData {
     // **********************************************************************
 
     @Override
-    public final Connection getConnection() {
+    public Connection getConnection() {
         return connection;
     }
 
@@ -360,7 +360,7 @@ public abstract class ProxyDatabaseMetaData implements DatabaseMetaData {
 
     @Override
     @SuppressWarnings("unchecked")
-    public final <T> T unwrap(@NotNull Class<T> iface) throws SQLException {
+    public <T> T unwrap(@NotNull Class<T> iface) throws SQLException {
         if (iface.isInstance(delegate)) {
             return (T) delegate;
         } else if (delegate != null) {

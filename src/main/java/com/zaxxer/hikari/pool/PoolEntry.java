@@ -18,7 +18,8 @@
  */
 package com.zaxxer.hikari.pool;
 
-import com.zaxxer.hikari.util.ConcurrentBag.IConcurrentBagEntry;
+import com.zaxxer.hikari.util.ClockSource;
+import com.zaxxer.hikari.util.ConcurrentBag;
 import com.zaxxer.hikari.util.FastList;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,8 +31,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-
-import static com.zaxxer.hikari.util.ClockSource.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Entry used in the ConcurrentBag to track Connection instances.
@@ -41,7 +41,7 @@ import static com.zaxxer.hikari.util.ClockSource.*;
 @Slf4j
 @Setter
 @Getter(lombok.AccessLevel.PACKAGE)
-final class PoolEntry implements IConcurrentBagEntry {
+final class PoolEntry implements ConcurrentBag.IConcurrentBagEntry {
 
     private static final AtomicIntegerFieldUpdater<PoolEntry> stateUpdater;
 
@@ -49,12 +49,13 @@ final class PoolEntry implements IConcurrentBagEntry {
     long lastAccessed;
     long lastBorrowed;
 
-    private volatile int state = 0;
-    @lombok.Getter(lombok.AccessLevel.PACKAGE)
+    private volatile int state;
+
+    @Getter(lombok.AccessLevel.PACKAGE)
     private volatile boolean markedEvicted;
 
-    private volatile ScheduledFuture<?> endOfLife;
-    private volatile ScheduledFuture<?> keepalive;
+    private final AtomicReference<ScheduledFuture<?>> endOfLife;
+    private final AtomicReference<ScheduledFuture<?>> keepalive;
 
     private final FastList<Statement> openStatements;
     private final HikariPool hikariPool;
@@ -71,8 +72,10 @@ final class PoolEntry implements IConcurrentBagEntry {
         hikariPool = (HikariPool) pool;
         this.isReadOnly = isReadOnly;
         this.isAutoCommit = isAutoCommit;
-        lastAccessed = currentTime();
+        lastAccessed = ClockSource.currentTime();
         openStatements = new FastList<>(Statement.class, 16);
+        endOfLife = new AtomicReference<>();
+        keepalive = new AtomicReference<>();
     }
 
     /**
@@ -93,7 +96,7 @@ final class PoolEntry implements IConcurrentBagEntry {
      * @param endOfLife this PoolEntry/Connection's end of life {@link ScheduledFuture}
      */
     void setFutureEol(ScheduledFuture<?> endOfLife) {
-        this.endOfLife = endOfLife;
+        this.endOfLife.set(endOfLife);
     }
 
     Connection createProxyConnection(ProxyLeakTask leakTask, long now) {
@@ -121,7 +124,7 @@ final class PoolEntry implements IConcurrentBagEntry {
      * Returns millis since lastBorrowed
      */
     long getMillisSinceBorrowed() {
-        return elapsedMillis(lastBorrowed);
+        return ClockSource.elapsedMillis(lastBorrowed);
     }
 
     PoolBase getPoolBase() {
@@ -130,7 +133,7 @@ final class PoolEntry implements IConcurrentBagEntry {
 
     @Override
     public @NotNull String toString() {
-        return connection + ", accessed " + elapsedDisplayString(lastAccessed, currentTime()) + " ago, " + stateToString();
+        return connection + ", accessed " + ClockSource.elapsedDisplayString(lastAccessed, ClockSource.currentTime()) + " ago, " + stateToString();
     }
 
     // ***********************************************************************
@@ -153,14 +156,14 @@ final class PoolEntry implements IConcurrentBagEntry {
     }
 
     Connection close() {
-        ScheduledFuture<?> eol = endOfLife;
+        ScheduledFuture<?> eol = endOfLife.getAndSet(null);
 
         if (eol != null && !eol.isDone() && !eol.cancel(false)) {
             log.warn("{} - maxLifeTime expiration task cancellation unexpectedly"
                     + " returned false for connection {}", getPoolName(), connection);
         }
 
-        ScheduledFuture<?> ka = keepalive;
+        ScheduledFuture<?> ka = keepalive.getAndSet(null);
 
         if (ka != null && !ka.isDone() && !ka.cancel(false)) {
             log.warn("{} - keepalive task cancellation unexpectedly returned"
@@ -169,8 +172,6 @@ final class PoolEntry implements IConcurrentBagEntry {
 
         Connection con = connection;
         connection = null;
-        endOfLife = null;
-        keepalive = null;
         return con;
     }
 

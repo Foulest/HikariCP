@@ -19,6 +19,8 @@
 package com.zaxxer.hikari.pool;
 
 import com.zaxxer.hikari.util.FastList;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
 import java.sql.*;
 
@@ -29,11 +31,8 @@ import java.sql.*;
  * @author Brett Wooldridge
  */
 @SuppressWarnings("unused")
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ProxyFactory {
-
-    private ProxyFactory() {
-        // un-constructable
-    }
 
     /**
      * Create a proxy for the specified {@link Connection} instance.

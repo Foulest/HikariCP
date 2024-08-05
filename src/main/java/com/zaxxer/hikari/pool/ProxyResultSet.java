@@ -39,7 +39,7 @@ public abstract class ProxyResultSet implements ResultSet {
     protected final ProxyStatement statement;
     final ResultSet delegate;
 
-    final SQLException checkException(SQLException ex) {
+    SQLException checkException(SQLException ex) {
         return connection.checkException(ex);
     }
 
@@ -72,7 +72,7 @@ public abstract class ProxyResultSet implements ResultSet {
 
     @Override
     @SuppressWarnings("unchecked")
-    public final <T> T unwrap(@NotNull Class<T> iface) throws SQLException {
+    public <T> T unwrap(@NotNull Class<T> iface) throws SQLException {
         if (iface.isInstance(delegate)) {
             return (T) delegate;
         } else if (delegate != null) {

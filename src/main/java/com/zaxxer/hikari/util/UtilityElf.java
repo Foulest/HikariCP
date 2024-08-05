@@ -18,30 +18,33 @@
  */
 package com.zaxxer.hikari.util;
 
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Locale;
 import java.util.concurrent.*;
-
-import static java.lang.Thread.currentThread;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * @author Brett Wooldridge
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class UtilityElf {
-
-    private UtilityElf() {
-        // non-constructable
-    }
 
     /**
      * @return null if string is null or empty
      */
-    public static String getNullIfEmpty(String text) {
-        return text == null ? null : text.trim().isEmpty() ? null : text.trim();
+    public static @Nullable String getNullIfEmpty(String text) {
+        if (text == null) {
+            return null;
+        }
+
+        String trimmedText = text.trim();
+        return trimmedText.isEmpty() ? null : trimmedText;
     }
 
     /**
@@ -52,9 +55,8 @@ public final class UtilityElf {
     public static void quietlySleep(long millis) {
         try {
             Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            // I said be quiet!
-            currentThread().interrupt();
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -84,25 +86,30 @@ public final class UtilityElf {
      * @param args      arguments to a constructor
      * @return an instance of the specified class
      */
-    public static <T> T createInstance(String className, Class<T> clazz, Object... args) {
+    public static <T> @Nullable T createInstance(String className, Class<T> clazz, Object... args) {
         if (className == null) {
             return null;
         }
 
         try {
             Class<?> loaded = UtilityElf.class.getClassLoader().loadClass(className);
+
             if (args.length == 0) {
                 return clazz.cast(loaded.getDeclaredConstructor().newInstance());
             }
 
             Class<?>[] argClasses = new Class<?>[args.length];
-            for (int i = 0; i < args.length; i++) {
+            int size = args.length;
+
+            for (int i = 0; i < size; i++) {
                 argClasses[i] = args[i].getClass();
             }
+
             Constructor<?> constructor = loaded.getConstructor(argClasses);
             return clazz.cast(constructor.newInstance(args));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | IllegalArgumentException
+                 | InvocationTargetException | NoSuchMethodException | SecurityException ex) {
+            throw new RuntimeException(ex);
         }
     }
 
@@ -125,7 +132,7 @@ public final class UtilityElf {
         LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>(queueSize);
 
         ThreadPoolExecutor executor = new ThreadPoolExecutor(
-                1, 1, 5, SECONDS, queue, threadFactory, policy
+                1, 1, 5, TimeUnit.SECONDS, queue, threadFactory, policy
         );
 
         executor.allowCoreThreadTimeOut(true);
@@ -149,7 +156,7 @@ public final class UtilityElf {
         }
 
         ThreadPoolExecutor executor = new ThreadPoolExecutor(
-                1, 1, 5, SECONDS, queue, threadFactory, policy
+                1, 1, 5, TimeUnit.SECONDS, queue, threadFactory, policy
         );
 
         executor.allowCoreThreadTimeOut(true);
@@ -170,7 +177,7 @@ public final class UtilityElf {
         if (transactionIsolationName != null) {
             try {
                 // use the english locale to avoid the infamous turkish locale bug
-                String upperCaseIsolationLevelName = transactionIsolationName.toUpperCase(Locale.ENGLISH);
+                String upperCaseIsolationLevelName = transactionIsolationName.toUpperCase(Locale.ROOT);
                 return IsolationLevel.valueOf(upperCaseIsolationLevelName).getLevelId();
             } catch (IllegalArgumentException ex) {
                 // legacy support for passing an integer version of the isolation level
@@ -183,11 +190,9 @@ public final class UtilityElf {
                         }
                     }
 
-                    throw new IllegalArgumentException("Invalid transaction isolation value: "
-                            + transactionIsolationName);
+                    throw new IllegalArgumentException("Invalid transaction isolation value: " + transactionIsolationName);
                 } catch (NumberFormatException nfe) {
-                    throw new IllegalArgumentException("Invalid transaction isolation value: "
-                            + transactionIsolationName, nfe);
+                    throw new IllegalArgumentException("Invalid transaction isolation value: " + transactionIsolationName, nfe);
                 }
             }
         }

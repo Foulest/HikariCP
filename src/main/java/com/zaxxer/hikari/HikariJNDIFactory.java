@@ -19,6 +19,8 @@
 package com.zaxxer.hikari;
 
 import com.zaxxer.hikari.util.PropertyElf;
+import lombok.NoArgsConstructor;
+import lombok.Synchronized;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -36,12 +38,14 @@ import java.util.Set;
  *
  * @author Brett Wooldridge
  */
+@NoArgsConstructor
 @SuppressWarnings("unused")
 public class HikariJNDIFactory implements ObjectFactory {
 
     @Override
-    synchronized public Object getObjectInstance(Object obj, Name name, Context nameCtx,
-                                                 Hashtable<?, ?> environment) throws Exception {
+    @Synchronized
+    public @Nullable Object getObjectInstance(Object obj, Name name, Context nameCtx,
+                                              Hashtable<?, ?> environment) throws NamingException {
         // We only know how to deal with <code>javax.naming.Reference</code>
         // that specify a class name of "javax.sql.DataSource"
         if (obj instanceof Reference && "javax.sql.DataSource".equals(((Reference) obj).getClassName())) {
@@ -72,6 +76,7 @@ public class HikariJNDIFactory implements ObjectFactory {
         return new HikariDataSource(new HikariConfig(properties));
     }
 
+    @SuppressWarnings("MethodMayBeStatic")
     @Contract("_, null, _ -> fail")
     private @Nullable DataSource lookupJndiDataSource(Properties properties,
                                                       Context context, String jndiName) throws NamingException {

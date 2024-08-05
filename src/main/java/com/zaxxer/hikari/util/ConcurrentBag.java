@@ -1,21 +1,6 @@
 /*
  * Copyright (C) 2013, 2014 Brett Wooldridge
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/*
- * Copyright (C) 2013, 2014 Brett Wooldridge
- *
  * Modifications made by Foulest (https://github.com/Foulest)
  * for the HikariCP fork (https://github.com/Foulest/HikariCP).
  *
@@ -36,7 +21,9 @@ package com.zaxxer.hikari.util;
 import com.zaxxer.hikari.util.ConcurrentBag.IConcurrentBagEntry;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -45,14 +32,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
-
-import static com.zaxxer.hikari.util.ClockSource.currentTime;
-import static com.zaxxer.hikari.util.ClockSource.elapsedNanos;
-import static com.zaxxer.hikari.util.ConcurrentBag.IConcurrentBagEntry.*;
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
-import static java.util.concurrent.locks.LockSupport.parkNanos;
 
 /**
  * This is a specialized concurrent bag that achieves superior performance
@@ -99,6 +80,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
         int getState();
     }
 
+    @FunctionalInterface
     public interface IBagStateListener {
 
         void addBagItem(int waiting);
@@ -128,20 +110,20 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
      * specified timeout if none are available.
      *
      * @param timeout  how long to wait before giving up, in units of unit
-     * @param timeUnit a <code>TimeUnit</code> determining how to interpret the timeout parameter
+     * @param timeUnit a {@code TimeUnit} determining how to interpret the timeout parameter
      * @return a borrowed instance from the bag or null if a timeout occurs
      * @throws InterruptedException if interrupted while waiting
      */
     @SuppressWarnings("unchecked")
-    public T borrow(long timeout, TimeUnit timeUnit) throws InterruptedException {
+    public @Nullable T borrow(long timeout, TimeUnit timeUnit) throws InterruptedException {
         // Try the thread-local list first
         List<Object> list = threadList.get();
 
         for (int i = list.size() - 1; i >= 0; i--) {
             Object entry = list.remove(i);
-            T bagEntry = weakThreadLocals ? ((WeakReference<T>) entry).get() : (T) entry;
+            T bagEntry = weakThreadLocals ? ((Reference<T>) entry).get() : (T) entry;
 
-            if (bagEntry != null && bagEntry.compareAndSet(STATE_NOT_IN_USE, STATE_IN_USE)) {
+            if (bagEntry != null && bagEntry.compareAndSet(IConcurrentBagEntry.STATE_NOT_IN_USE, IConcurrentBagEntry.STATE_IN_USE)) {
                 return bagEntry;
             }
         }
@@ -150,7 +132,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
         int waiting = waiters.incrementAndGet();
         try {
             for (T bagEntry : sharedList) {
-                if (bagEntry.compareAndSet(STATE_NOT_IN_USE, STATE_IN_USE)) {
+                if (bagEntry.compareAndSet(IConcurrentBagEntry.STATE_NOT_IN_USE, IConcurrentBagEntry.STATE_IN_USE)) {
                     // If we may have stolen another waiter's connection, request another bag add.
                     if (waiting > 1) {
                         listener.addBagItem(waiting - 1);
@@ -163,13 +145,13 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
             timeout = timeUnit.toNanos(timeout);
 
             do {
-                long start = currentTime();
-                T bagEntry = handoffQueue.poll(timeout, NANOSECONDS);
+                long start = ClockSource.currentTime();
+                T bagEntry = handoffQueue.poll(timeout, TimeUnit.NANOSECONDS);
 
-                if (bagEntry == null || bagEntry.compareAndSet(STATE_NOT_IN_USE, STATE_IN_USE)) {
+                if (bagEntry == null || bagEntry.compareAndSet(IConcurrentBagEntry.STATE_NOT_IN_USE, IConcurrentBagEntry.STATE_IN_USE)) {
                     return bagEntry;
                 }
-                timeout -= elapsedNanos(start);
+                timeout -= ClockSource.elapsedNanos(start);
             } while (timeout > 10_000);
             return null;
         } finally {
@@ -187,13 +169,13 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
      * @throws IllegalStateException if the bagEntry was not borrowed from the bag
      */
     public void requite(@NotNull T bagEntry) {
-        bagEntry.setState(STATE_NOT_IN_USE);
+        bagEntry.setState(IConcurrentBagEntry.STATE_NOT_IN_USE);
 
         for (int i = 0; waiters.get() > 0; i++) {
-            if (bagEntry.getState() != STATE_NOT_IN_USE || handoffQueue.offer(bagEntry)) {
+            if (bagEntry.getState() != IConcurrentBagEntry.STATE_NOT_IN_USE || handoffQueue.offer(bagEntry)) {
                 return;
             } else if ((i & 0xff) == 0xff) {
-                parkNanos(MICROSECONDS.toNanos(10));
+                LockSupport.parkNanos(TimeUnit.MICROSECONDS.toNanos(10));
             } else {
                 Thread.yield();
             }
@@ -220,14 +202,14 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
         sharedList.add(bagEntry);
 
         // spin until a thread takes it or none are waiting
-        while (waiters.get() > 0 && bagEntry.getState() == STATE_NOT_IN_USE && !handoffQueue.offer(bagEntry)) {
+        while (waiters.get() > 0 && bagEntry.getState() == IConcurrentBagEntry.STATE_NOT_IN_USE && !handoffQueue.offer(bagEntry)) {
             Thread.yield();
         }
     }
 
     /**
      * Remove a value from the bag.  This method should only be called
-     * with objects obtained by <code>borrow(long, TimeUnit)</code> or <code>reserve(T)</code>
+     * with objects obtained by {@code borrow(long, TimeUnit)} or {@code reserve(T)}
      *
      * @param bagEntry the value to remove
      * @return true if the entry was removed, false otherwise
@@ -235,8 +217,8 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
      *                               from the bag that was not borrowed or reserved first
      */
     public boolean remove(@NotNull T bagEntry) {
-        if (!bagEntry.compareAndSet(STATE_IN_USE, STATE_REMOVED)
-                && !bagEntry.compareAndSet(STATE_RESERVED, STATE_REMOVED) && !closed) {
+        if (!bagEntry.compareAndSet(IConcurrentBagEntry.STATE_IN_USE, IConcurrentBagEntry.STATE_REMOVED)
+                && !bagEntry.compareAndSet(IConcurrentBagEntry.STATE_RESERVED, IConcurrentBagEntry.STATE_REMOVED) && !closed) {
             log.warn("Attempt to remove an object from the bag that was not borrowed or reserved: {}", bagEntry);
             return false;
         }
@@ -247,7 +229,12 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
             log.warn("Attempt to remove an object from the bag that does not exist: {}", bagEntry);
         }
 
-        threadList.get().remove(bagEntry);
+        List<Object> threadLocalList = threadList.get();
+        threadLocalList.remove(bagEntry);
+
+        if (threadLocalList.isEmpty()) {
+            threadList.remove();
+        }
         return removed;
     }
 
@@ -262,7 +249,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
     /**
      * This method provides a "snapshot" in time of the BagEntry
      * items in the bag in the specified state.  It does not "lock"
-     * or reserve items in any way.  Call <code>reserve(T)</code>
+     * or reserve items in any way.  Call {@code reserve(T)}
      * on items in list before performing any action on them.
      *
      * @param state one of the {@link IConcurrentBagEntry} states
@@ -276,7 +263,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
 
     /**
      * This method provides a "snapshot" in time of the bag items.  It
-     * does not "lock" or reserve items in any way.  Call <code>reserve(T)</code>
+     * does not "lock" or reserve items in any way.  Call {@code reserve(T)}
      * on items in the list, or understand the concurrency implications of
      * modifying items, before performing any action on them.
      *
@@ -290,28 +277,28 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
     /**
      * The method is used to make an item in the bag "unavailable" for
      * borrowing.  It is primarily used when wanting to operate on items
-     * returned by the <code>values(int)</code> method.  Items that are
-     * reserved can be removed from the bag via <code>remove(T)</code>
+     * returned by the {@code values(int)} method.  Items that are
+     * reserved can be removed from the bag via {@code remove(T)}
      * without the need to unreserve them.  Items that are not removed
      * from the bag can be make available for borrowing again by calling
-     * the <code>unreserve(T)</code> method.
+     * the {@code unreserve(T)} method.
      *
      * @param bagEntry the item to reserve
      * @return true if the item was able to be reserved, false otherwise
      */
     public boolean reserve(@NotNull T bagEntry) {
-        return bagEntry.compareAndSet(STATE_NOT_IN_USE, STATE_RESERVED);
+        return bagEntry.compareAndSet(IConcurrentBagEntry.STATE_NOT_IN_USE, IConcurrentBagEntry.STATE_RESERVED);
     }
 
     /**
-     * This method is used to make an item reserved via <code>reserve(T)</code>
+     * This method is used to make an item reserved via {@code reserve(T)}
      * available again for borrowing.
      *
      * @param bagEntry the item to unreserve
      */
     @SuppressWarnings("SpellCheckingInspection")
     public void unreserve(@NotNull T bagEntry) {
-        if (bagEntry.compareAndSet(STATE_RESERVED, STATE_NOT_IN_USE)) {
+        if (bagEntry.compareAndSet(IConcurrentBagEntry.STATE_RESERVED, IConcurrentBagEntry.STATE_NOT_IN_USE)) {
             // spin until a thread takes it or none are waiting
             while (waiters.get() > 0 && !handoffQueue.offer(bagEntry)) {
                 Thread.yield();

@@ -19,7 +19,6 @@
 package com.zaxxer.hikari.metrics.prometheus;
 
 import com.zaxxer.hikari.metrics.IMetricsTracker;
-import com.zaxxer.hikari.metrics.prometheus.PrometheusMetricsTrackerFactory.RegistrationStatus;
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Summary;
@@ -28,29 +27,27 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import static com.zaxxer.hikari.metrics.prometheus.PrometheusMetricsTrackerFactory.RegistrationStatus.REGISTERED;
-
 class PrometheusMetricsTracker implements IMetricsTracker {
 
-    private final static Counter CONNECTION_TIMEOUT_COUNTER = Counter.build()
+    private static final Counter CONNECTION_TIMEOUT_COUNTER = Counter.build()
             .name("hikaricp_connection_timeout_total")
             .labelNames("pool")
             .help("Connection timeout total count")
             .create();
 
-    private final static Summary ELAPSED_ACQUIRED_SUMMARY =
+    private static final Summary ELAPSED_ACQUIRED_SUMMARY =
             createSummary("hikaricp_connection_acquired_nanos",
                     "Connection acquired time (ns)");
 
-    private final static Summary ELAPSED_USAGE_SUMMARY =
+    private static final Summary ELAPSED_USAGE_SUMMARY =
             createSummary("hikaricp_connection_usage_millis",
                     "Connection usage (ms)");
 
-    private final static Summary ELAPSED_CREATION_SUMMARY =
+    private static final Summary ELAPSED_CREATION_SUMMARY =
             createSummary("hikaricp_connection_creation_millis",
                     "Connection creation (ms)");
 
-    private final static Map<CollectorRegistry, RegistrationStatus> registrationStatuses = new ConcurrentHashMap<>();
+    private static final Map<CollectorRegistry, PrometheusMetricsTrackerFactory.RegistrationStatus> registrationStatuses = new ConcurrentHashMap<>();
 
     private final String poolName;
     private final HikariCPCollector hikariCPCollector;
@@ -69,8 +66,8 @@ class PrometheusMetricsTracker implements IMetricsTracker {
         elapsedCreationSummaryChild = ELAPSED_CREATION_SUMMARY.labels(poolName);
     }
 
-    private void registerMetrics(CollectorRegistry collectorRegistry) {
-        if (registrationStatuses.putIfAbsent(collectorRegistry, REGISTERED) == null) {
+    private static void registerMetrics(CollectorRegistry collectorRegistry) {
+        if (registrationStatuses.putIfAbsent(collectorRegistry, PrometheusMetricsTrackerFactory.RegistrationStatus.REGISTERED) == null) {
             CONNECTION_TIMEOUT_COUNTER.register(collectorRegistry);
             ELAPSED_ACQUIRED_SUMMARY.register(collectorRegistry);
             ELAPSED_USAGE_SUMMARY.register(collectorRegistry);

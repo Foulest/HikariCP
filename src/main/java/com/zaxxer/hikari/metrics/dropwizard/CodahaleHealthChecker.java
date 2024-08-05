@@ -39,12 +39,12 @@ import java.util.concurrent.TimeUnit;
  *   <li>ConnectivityCheck</li>
  *   <li>Connection99Percent</li>
  * </ul>
- * The ConnectivityCheck will use the <code>connectionTimeout</code>, unless the health check property
- * <code>connectivityCheckTimeoutMs</code> is defined. However, if either the <code>connectionTimeout</code>
- * or the <code>connectivityCheckTimeoutMs</code> is 0 (infinite), a timeout of 10 seconds will be used.
+ * The ConnectivityCheck will use the {@code connectionTimeout}, unless the health check property
+ * {@code connectivityCheckTimeoutMs} is defined. However, if either the {@code connectionTimeout}
+ * or the {@code connectivityCheckTimeoutMs} is 0 (infinite), a timeout of 10 seconds will be used.
  * <p>
  * The Connection99Percent health check will only be registered if the health check property
- * <code>expected99thPercentileMs</code> is defined and greater than 0.
+ * {@code expected99thPercentileMs} is defined and greater than 0.
  *
  * @author Brett Wooldridge
  */

@@ -18,10 +18,9 @@
  */
 package com.zaxxer.hikari.metrics;
 
-import java.util.concurrent.atomic.AtomicLong;
+import com.zaxxer.hikari.util.ClockSource;
 
-import static com.zaxxer.hikari.util.ClockSource.currentTime;
-import static com.zaxxer.hikari.util.ClockSource.plusMillis;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author Brett Wooldridge
@@ -38,7 +37,7 @@ public abstract class PoolStats {
     protected volatile int maxConnections;
     protected volatile int minConnections;
 
-    public PoolStats(long timeoutMs) {
+    protected PoolStats(long timeoutMs) {
         this.timeoutMs = timeoutMs;
         reloadAt = new AtomicLong();
     }
@@ -88,13 +87,13 @@ public abstract class PoolStats {
     protected abstract void update();
 
     private boolean shouldLoad() {
-        for (; ; ) {
-            long now = currentTime();
+        while (true) {
+            long now = ClockSource.currentTime();
             long reloadTime = reloadAt.get();
 
             if (reloadTime > now) {
                 return false;
-            } else if (reloadAt.compareAndSet(reloadTime, plusMillis(now, timeoutMs))) {
+            } else if (reloadAt.compareAndSet(reloadTime, ClockSource.plusMillis(now, timeoutMs))) {
                 return true;
             }
         }

@@ -19,8 +19,12 @@
 package com.zaxxer.hikari.pool;
 
 import com.zaxxer.hikari.SQLExceptionOverride;
+import com.zaxxer.hikari.util.ClockSource;
 import com.zaxxer.hikari.util.FastList;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 
@@ -30,9 +34,6 @@ import java.sql.*;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Executor;
-
-import static com.zaxxer.hikari.SQLExceptionOverride.Override.DO_NOT_EVICT;
-import static com.zaxxer.hikari.util.ClockSource.currentTime;
 
 /**
  * This is the proxy class for java.sql.Connection.
@@ -64,8 +65,8 @@ public abstract class ProxyConnection implements Connection {
     private long lastAccess;
     private boolean isCommitStateDirty;
 
-    public boolean isReadOnly;
-    private boolean isAutoCommit;
+    public boolean readOnlyState;
+    private boolean autoCommitState;
     private int networkTimeoutState;
     private int transactionIsolationState;
     private String catalogState;
@@ -93,26 +94,25 @@ public abstract class ProxyConnection implements Connection {
                               FastList<Statement> openStatements,
                               ProxyLeakTask leakTask,
                               long now,
-                              boolean isReadOnly,
-                              boolean isAutoCommit) {
+                              boolean readOnlyState,
+                              boolean autoCommitState) {
         this.poolEntry = poolEntry;
         delegate = connection;
         this.openStatements = openStatements;
         this.leakTask = leakTask;
         lastAccess = now;
-        this.isReadOnly = isReadOnly;
-        this.isAutoCommit = isAutoCommit;
+        this.readOnlyState = readOnlyState;
+        this.autoCommitState = autoCommitState;
     }
 
     // Correct implementation of isReadOnly() as a method
-    @Override
-    public boolean isReadOnly() throws SQLException {
+    public boolean isReadOnlyState() throws SQLException {
         // Implementation logic here. For example, delegating the call to the actual connection:
         return delegate.isReadOnly();
     }
 
     @Override
-    public final @NotNull String toString() {
+    public @NotNull String toString() {
         return getClass().getSimpleName() + '@' + System.identityHashCode(this) + " wrapping " + delegate;
     }
 
@@ -120,19 +120,19 @@ public abstract class ProxyConnection implements Connection {
     //                     Connection State Accessors
     // ***********************************************************************
 
-    final boolean getAutoCommitState() {
-        return isAutoCommit;
+    boolean getAutoCommitState() {
+        return autoCommitState;
     }
 
-    final boolean getReadOnlyState() {
-        return isReadOnly;
+    boolean getReadOnlyState() {
+        return readOnlyState;
     }
 
     // ***********************************************************************
     //                          Internal methods
     // ***********************************************************************
 
-    final SQLException checkException(SQLException ex) {
+    SQLException checkException(SQLException ex) {
         boolean evict = false;
         SQLException nse = ex;
         SQLExceptionOverride exceptionOverride = poolEntry.getPoolBase().exceptionOverride;
@@ -140,17 +140,15 @@ public abstract class ProxyConnection implements Connection {
         for (int depth = 0; delegate != ClosedConnection.CLOSED_CONNECTION && nse != null && depth < 10; depth++) {
             String sqlState = nse.getSQLState();
 
-            if (sqlState != null && sqlState.startsWith("08")
+            boolean isErrorState = sqlState != null && sqlState.startsWith("08")
                     || nse instanceof SQLTimeoutException
                     || ERROR_STATES.contains(sqlState)
-                    || ERROR_CODES.contains(nse.getErrorCode())
-                    || exceptionOverride != null && exceptionOverride.adjudicateAnyway()) {
-                if (exceptionOverride != null && exceptionOverride.adjudicate(nse) == DO_NOT_EVICT) {
-                    break;
-                }
+                    || ERROR_CODES.contains(nse.getErrorCode());
 
-                // broken connection
-                evict = true;
+            if (isErrorState || (exceptionOverride != null && exceptionOverride.adjudicateAnyway())) {
+                if (exceptionOverride == null || exceptionOverride.adjudicate(nse) != SQLExceptionOverride.Override.DO_NOT_EVICT) {
+                    evict = true;
+                }
                 break;
             } else {
                 nse = nse.getNextException();
@@ -160,6 +158,7 @@ public abstract class ProxyConnection implements Connection {
         if (evict) {
             log.warn("{} - Connection {} marked as broken because of SQLSTATE({}), ErrorCode({})",
                     poolEntry.getPoolName(), delegate, nse.getSQLState(), nse.getErrorCode(), nse);
+
             leakTask.cancel();
             poolEntry.evict("(connection is broken)");
             delegate = ClosedConnection.CLOSED_CONNECTION;
@@ -167,13 +166,14 @@ public abstract class ProxyConnection implements Connection {
         return ex;
     }
 
-    final synchronized void untrackStatement(Statement statement) {
+    @Synchronized
+    void untrackStatement(Statement statement) {
         openStatements.remove(statement);
     }
 
-    final void markCommitStateDirty() {
-        if (isAutoCommit) {
-            lastAccess = currentTime();
+    void markCommitStateDirty() {
+        if (autoCommitState) {
+            lastAccess = ClockSource.currentTime();
         } else {
             isCommitStateDirty = true;
         }
@@ -183,13 +183,15 @@ public abstract class ProxyConnection implements Connection {
         leakTask.cancel();
     }
 
-    private synchronized <T extends Statement> T trackStatement(T statement) {
+    @Synchronized
+    private <T extends Statement> T trackStatement(T statement) {
         openStatements.add(statement);
         return statement;
     }
 
+    @Synchronized
     @SuppressWarnings("EmptyTryBlock")
-    private synchronized void closeStatements() {
+    private void closeStatements() {
         int size = openStatements.size();
 
         if (size > 0) {
@@ -214,7 +216,7 @@ public abstract class ProxyConnection implements Connection {
     // **********************************************************************
 
     @Override
-    public final void close() throws SQLException {
+    public void close() throws SQLException {
         // Closing statements can cause connection eviction, so this must run before the conditional below
         closeStatements();
 
@@ -222,16 +224,16 @@ public abstract class ProxyConnection implements Connection {
             leakTask.cancel();
 
             try {
-                if (isCommitStateDirty && !isAutoCommit) {
+                if (isCommitStateDirty && !autoCommitState) {
                     delegate.rollback();
-                    lastAccess = currentTime();
+                    lastAccess = ClockSource.currentTime();
                     log.debug("{} - Executed rollback on connection {} due to dirty"
                             + " commit state on close().", poolEntry.getPoolName(), delegate);
                 }
 
                 if (dirtyBits != 0) {
                     poolEntry.resetConnectionState(this, dirtyBits);
-                    lastAccess = currentTime();
+                    lastAccess = ClockSource.currentTime();
                 }
 
                 delegate.clearWarnings();
@@ -337,34 +339,32 @@ public abstract class ProxyConnection implements Connection {
     public void commit() throws SQLException {
         delegate.commit();
         isCommitStateDirty = false;
-        lastAccess = currentTime();
+        lastAccess = ClockSource.currentTime();
     }
 
     @Override
     public void rollback() throws SQLException {
         delegate.rollback();
         isCommitStateDirty = false;
-        lastAccess = currentTime();
+        lastAccess = ClockSource.currentTime();
     }
 
     @Override
     public void rollback(Savepoint savepoint) throws SQLException {
         delegate.rollback(savepoint);
         isCommitStateDirty = true;
-        lastAccess = currentTime();
+        lastAccess = ClockSource.currentTime();
     }
 
-    @Override
-    public void setAutoCommit(boolean autoCommit) throws SQLException {
+    public void setAutoCommitState(boolean autoCommit) throws SQLException {
         delegate.setAutoCommit(autoCommit);
-        isAutoCommit = autoCommit;
+        autoCommitState = autoCommit;
         dirtyBits |= DIRTY_BIT_AUTOCOMMIT;
     }
 
-    @Override
-    public void setReadOnly(boolean readOnly) throws SQLException {
+    public void setReadOnlyState(boolean readOnly) throws SQLException {
         delegate.setReadOnly(readOnly);
-        isReadOnly = readOnly;
+        readOnlyState = readOnly;
         isCommitStateDirty = false;
         dirtyBits |= DIRTY_BIT_READONLY;
     }
@@ -396,13 +396,13 @@ public abstract class ProxyConnection implements Connection {
     }
 
     @Override
-    public final boolean isWrapperFor(@NotNull Class<?> iface) throws SQLException {
+    public boolean isWrapperFor(@NotNull Class<?> iface) throws SQLException {
         return iface.isInstance(delegate) || (delegate != null && delegate.isWrapperFor(iface));
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public final <T> T unwrap(@NotNull Class<T> iface) throws SQLException {
+    public <T> T unwrap(@NotNull Class<T> iface) throws SQLException {
         if (iface.isInstance(delegate)) {
             return (T) delegate;
         } else if (delegate != null) {
@@ -415,6 +415,7 @@ public abstract class ProxyConnection implements Connection {
     //                         Private classes
     // **********************************************************************
 
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
     private static final class ClosedConnection {
 
         static final Connection CLOSED_CONNECTION = getClosedConnection();
@@ -433,6 +434,8 @@ public abstract class ProxyConnection implements Connection {
                         return Void.TYPE;
                     case "toString":
                         return ClosedConnection.class.getCanonicalName();
+                    default:
+                        break;
                 }
 
                 throw new SQLException("Connection is closed");

@@ -1,29 +1,11 @@
-/*
- * Copyright (C) 2013, 2014 Brett Wooldridge
- *
- * Modifications made by Foulest (https://github.com/Foulest)
- * for the HikariCP fork (https://github.com/Foulest/HikariCP).
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.zaxxer.hikari.util;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.TimeUnit;
-
-import static java.util.concurrent.TimeUnit.*;
 
 /**
  * A resolution-independent provider of current time-stamps and elapsed time
@@ -167,24 +149,22 @@ public interface ClockSource {
         StringBuilder sb = new StringBuilder(elapsedNanos < 0 ? "-" : "");
         elapsedNanos = Math.abs(elapsedNanos);
 
-        for (TimeUnit unit : TIMEUNITS_DESCENDING) {
-            long converted = unit.convert(elapsedNanos, NANOSECONDS);
+        for (TimeUnit unit : TimeUnitConstants.TIMEUNITS_DESCENDING) {
+            long converted = unit.convert(elapsedNanos, TimeUnit.NANOSECONDS);
 
             if (converted > 0) {
-                sb.append(converted).append(TIMEUNIT_DISPLAY_VALUES[unit.ordinal()]);
-                elapsedNanos -= NANOSECONDS.convert(converted, unit);
+                sb.append(converted).append(TimeUnitConstants.TIMEUNIT_DISPLAY_VALUES[unit.ordinal()]);
+                elapsedNanos -= TimeUnit.NANOSECONDS.convert(converted, unit);
             }
         }
         return sb.toString();
     }
 
-    TimeUnit[] TIMEUNITS_DESCENDING = {DAYS, HOURS, MINUTES, SECONDS, MILLISECONDS, MICROSECONDS, NANOSECONDS};
-    String[] TIMEUNIT_DISPLAY_VALUES = {"ns", "µs", "ms", "s", "m", "h", "d"};
-
     /**
      * Factory class used to create a platform-specific ClockSource.
      */
-    class Factory {
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    final class Factory {
 
         @Contract(" -> new")
         private static @NotNull ClockSource create() {
@@ -197,6 +177,7 @@ public interface ClockSource {
         }
     }
 
+    @NoArgsConstructor
     final class MillisecondClockSource implements ClockSource {
 
         @Override
@@ -216,12 +197,12 @@ public interface ClockSource {
 
         @Override
         public long elapsedNanos0(long startTime) {
-            return MILLISECONDS.toNanos(System.currentTimeMillis() - startTime);
+            return TimeUnit.MILLISECONDS.toNanos(System.currentTimeMillis() - startTime);
         }
 
         @Override
         public long elapsedNanos0(long startTime, long endTime) {
-            return MILLISECONDS.toNanos(endTime - startTime);
+            return TimeUnit.MILLISECONDS.toNanos(endTime - startTime);
         }
 
         @Override
@@ -231,7 +212,7 @@ public interface ClockSource {
 
         @Override
         public long toNanos0(long time) {
-            return MILLISECONDS.toNanos(time);
+            return TimeUnit.MILLISECONDS.toNanos(time);
         }
 
         @Override
@@ -241,10 +222,11 @@ public interface ClockSource {
 
         @Override
         public TimeUnit getSourceTimeUnit0() {
-            return MILLISECONDS;
+            return TimeUnit.MILLISECONDS;
         }
     }
 
+    @NoArgsConstructor
     class NanosecondClockSource implements ClockSource {
 
         @Override
@@ -254,7 +236,7 @@ public interface ClockSource {
 
         @Override
         public long toMillis0(long time) {
-            return NANOSECONDS.toMillis(time);
+            return TimeUnit.NANOSECONDS.toMillis(time);
         }
 
         @Override
@@ -264,12 +246,12 @@ public interface ClockSource {
 
         @Override
         public long elapsedMillis0(long startTime) {
-            return NANOSECONDS.toMillis(System.nanoTime() - startTime);
+            return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
         }
 
         @Override
         public long elapsedMillis0(long startTime, long endTime) {
-            return NANOSECONDS.toMillis(endTime - startTime);
+            return TimeUnit.NANOSECONDS.toMillis(endTime - startTime);
         }
 
         @Override
@@ -284,12 +266,12 @@ public interface ClockSource {
 
         @Override
         public long plusMillis0(long time, long millis) {
-            return time + MILLISECONDS.toNanos(millis);
+            return time + TimeUnit.MILLISECONDS.toNanos(millis);
         }
 
         @Override
         public TimeUnit getSourceTimeUnit0() {
-            return NANOSECONDS;
+            return TimeUnit.NANOSECONDS;
         }
     }
 }

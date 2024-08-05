@@ -34,18 +34,22 @@ public class SuspendResumeLock {
     public static final SuspendResumeLock FAUX_LOCK = new SuspendResumeLock(false) {
         @Override
         public void acquire() {
+            // Do nothing
         }
 
         @Override
         public void release() {
+            // Do nothing
         }
 
         @Override
         public void suspend() {
+            // Do nothing
         }
 
         @Override
         public void resume() {
+            // Do nothing
         }
     };
 

@@ -34,14 +34,14 @@ import java.util.function.UnaryOperator;
  *
  * @author Brett Wooldridge
  */
-@SuppressWarnings({"unused", "unchecked"})
+@SuppressWarnings({"unused", "unchecked", "WeakerAccess"})
 public final class FastList<T> implements List<T>, RandomAccess, Serializable {
 
     private static final long serialVersionUID = -4598088075242913858L;
 
     private final Class<?> clazz;
 
-    private T[] elementData;
+    private transient T[] elementData;
     private int size;
 
     /**
@@ -66,6 +66,29 @@ public final class FastList<T> implements List<T>, RandomAccess, Serializable {
     }
 
     /**
+     * Construct a FastList by copying another FastList.
+     *
+     * @param other the FastList to copy
+     */
+    @Contract(pure = true)
+    public FastList(@NotNull FastList<T> other) {
+        clazz = other.clazz;
+        size = other.size;
+        elementData = Arrays.copyOf(other.elementData, other.elementData.length);
+    }
+
+    /**
+     * Create a new FastList by copying another FastList.
+     *
+     * @param other the FastList to copy
+     * @return a new FastList with the same elements as the other list
+     */
+    @Contract(value = "_ -> new", pure = true)
+    public static <T> @NotNull FastList<T> copyOf(FastList<T> other) {
+        return new FastList<>(other);
+    }
+
+    /**
      * Add an element to the tail of the FastList.
      *
      * @param element the element to add
@@ -73,14 +96,16 @@ public final class FastList<T> implements List<T>, RandomAccess, Serializable {
     @Override
     public boolean add(T element) {
         if (size < elementData.length) {
-            elementData[size++] = element;
+            elementData[size] = element;
+            size++;
         } else {
             // overflow-conscious code
             int oldCapacity = elementData.length;
             int newCapacity = oldCapacity << 1;
             T[] newElementData = (T[]) Array.newInstance(clazz, newCapacity);
             System.arraycopy(elementData, 0, newElementData, 0, oldCapacity);
-            newElementData[size++] = element;
+            newElementData[size] = element;
+            size++;
             elementData = newElementData;
         }
         return true;
@@ -105,7 +130,8 @@ public final class FastList<T> implements List<T>, RandomAccess, Serializable {
      * @return the last element of the list
      */
     public T removeLast() {
-        T element = elementData[--size];
+        --size;
+        T element = elementData[size];
         elementData[size] = null;
         return element;
     }
@@ -127,7 +153,8 @@ public final class FastList<T> implements List<T>, RandomAccess, Serializable {
                     System.arraycopy(elementData, index + 1, elementData, index, numMoved);
                 }
 
-                elementData[--size] = null;
+                --size;
+                elementData[size] = null;
                 return true;
             }
         }
@@ -183,7 +210,8 @@ public final class FastList<T> implements List<T>, RandomAccess, Serializable {
             System.arraycopy(elementData, index + 1, elementData, index, numMoved);
         }
 
-        elementData[--size] = null;
+        --size;
+        elementData[size] = null;
         return old;
     }
 
@@ -206,7 +234,9 @@ public final class FastList<T> implements List<T>, RandomAccess, Serializable {
             @Override
             public T next() {
                 if (index < size) {
-                    return elementData[index++];
+                    T t = elementData[index];
+                    index++;
+                    return t;
                 }
                 throw new NoSuchElementException("No more elements in FastList");
             }
@@ -279,11 +309,6 @@ public final class FastList<T> implements List<T>, RandomAccess, Serializable {
     }
 
     @Override
-    public Object clone() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public void forEach(Consumer<? super T> action) {
         throw new UnsupportedOperationException();
     }
@@ -306,5 +331,13 @@ public final class FastList<T> implements List<T>, RandomAccess, Serializable {
     @Override
     public void sort(Comparator<? super T> c) {
         throw new UnsupportedOperationException();
+    }
+
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
+        throw new java.io.NotSerializableException("com.zaxxer.hikari.util.FastList");
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+        throw new java.io.NotSerializableException("com.zaxxer.hikari.util.FastList");
     }
 }

@@ -21,6 +21,8 @@ package com.zaxxer.hikari.util;
 import com.zaxxer.hikari.pool.*;
 import javassist.*;
 import javassist.bytecode.ClassFile;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 
@@ -38,12 +40,15 @@ import java.util.*;
  * @author Brett Wooldridge
  */
 @Slf4j
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class JavassistProxyFactory {
 
     private static ClassPool classPool;
     private static String genDirectory = "";
 
-    public static void main(String @NotNull ... args) throws Exception {
+    public static void main(String @NotNull ... args)
+            throws NotFoundException, CannotCompileException, IOException,
+            ClassNotFoundException, NoSuchMethodException {
         classPool = new ClassPool();
         classPool.importPackage("java.sql");
         classPool.appendClassPath(new LoaderClassPath(JavassistProxyFactory.class.getClassLoader()));
@@ -71,7 +76,8 @@ public final class JavassistProxyFactory {
         modifyProxyFactory();
     }
 
-    private static void modifyProxyFactory() throws NotFoundException, CannotCompileException, IOException {
+    private static void modifyProxyFactory()
+            throws NotFoundException, CannotCompileException, IOException {
         log.debug("Generating method bodies for com.zaxxer.hikari.proxy.ProxyFactory");
 
         String packageName = ProxyConnection.class.getPackage().getName();
@@ -109,8 +115,8 @@ public final class JavassistProxyFactory {
     /**
      * Generate Javassist Proxy Classes
      */
-    private static <T> void generateProxyClass(Class<T> primaryInterface, @NotNull String superClassName,
-                                               String methodBody) throws Exception {
+    private static <T> void generateProxyClass(Class<T> primaryInterface, @NotNull String superClassName, String methodBody)
+            throws NotFoundException, CannotCompileException, IOException, ClassNotFoundException, NoSuchMethodException {
         String newClassName = superClassName.replaceAll("(.+)\\.(\\w+)", "$1.Hikari$2");
         CtClass superCt = classPool.getCtClass(superClassName);
 
@@ -120,14 +126,14 @@ public final class JavassistProxyFactory {
         log.debug("Generating {}", newClassName);
 
         // Make a set of method signatures we inherit implementation for, so we don't generate delegates for these
-        Set<String> superSigs = new HashSet<>();
+        Collection<String> superSigs = new HashSet<>();
         for (CtMethod method : superCt.getMethods()) {
             if ((method.getModifiers() & Modifier.FINAL) == Modifier.FINAL) {
                 superSigs.add(method.getName() + method.getSignature());
             }
         }
 
-        Set<String> methods = new HashSet<>();
+        Collection<String> methods = new HashSet<>();
 
         for (Class<?> intf : getAllInterfaces(primaryInterface)) {
             CtClass intfCt = classPool.getCtClass(intf.getName());
@@ -136,13 +142,9 @@ public final class JavassistProxyFactory {
             for (CtMethod intfMethod : intfCt.getDeclaredMethods()) {
                 String signature = intfMethod.getName() + intfMethod.getSignature();
 
-                // don't generate delegates for methods we override
-                if (superSigs.contains(signature)) {
-                    continue;
-                }
-
-                // Ignore already added methods that come from other interfaces
-                if (methods.contains(signature)) {
+                // Don't generate delegates for methods we override, and
+                // ignore already added methods that come from other interfaces
+                if (superSigs.contains(signature) || methods.contains(signature)) {
                     continue;
                 }
 
@@ -199,7 +201,8 @@ public final class JavassistProxyFactory {
         return false;
     }
 
-    private static boolean isDefaultMethod(Class<?> intf, @NotNull CtMethod intfMethod) throws Exception {
+    private static boolean isDefaultMethod(Class<?> intf, @NotNull CtMethod intfMethod)
+            throws NotFoundException, NoSuchMethodException, ClassNotFoundException {
         List<Class<?>> paramTypes = new ArrayList<>();
 
         for (CtClass pt : intfMethod.getParameterTypes()) {
@@ -231,7 +234,7 @@ public final class JavassistProxyFactory {
         return interfaces;
     }
 
-    private static Class<?> toJavaClass(@NotNull CtClass cls) throws Exception {
+    private static Class<?> toJavaClass(@NotNull CtClass cls) throws ClassNotFoundException {
         if (cls.getName().endsWith("[]")) {
             return Array.newInstance(toJavaClass(cls.getName()
                     .replace("[]", "")), 0).getClass();
@@ -240,7 +243,7 @@ public final class JavassistProxyFactory {
         }
     }
 
-    private static Class<?> toJavaClass(@NotNull String cn) throws Exception {
+    private static Class<?> toJavaClass(@NotNull String cn) throws ClassNotFoundException {
         switch (cn) {
             case "int":
                 return int.class;

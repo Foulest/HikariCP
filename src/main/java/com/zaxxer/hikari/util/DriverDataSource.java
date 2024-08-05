@@ -20,12 +20,14 @@ package com.zaxxer.hikari.util;
 
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import javax.sql.DataSource;
 import java.io.PrintWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.*;
 import java.util.Enumeration;
-import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Properties;
 
 @Slf4j
@@ -44,16 +46,16 @@ public final class DriverDataSource implements DataSource {
         this.jdbcUrl = jdbcUrl;
         driverProperties = new Properties();
 
-        for (Entry<Object, Object> entry : properties.entrySet()) {
+        for (Map.Entry<Object, Object> entry : properties.entrySet()) {
             driverProperties.setProperty(entry.getKey().toString(), entry.getValue().toString());
         }
 
         if (username != null) {
-            driverProperties.put(USER, driverProperties.getProperty(USER, username));
+            driverProperties.setProperty(USER, driverProperties.getProperty(USER, username));
         }
 
         if (password != null) {
-            driverProperties.put(PASSWORD, driverProperties.getProperty(PASSWORD, password));
+            driverProperties.setProperty(PASSWORD, driverProperties.getProperty(PASSWORD, password));
         }
 
         if (driverClassName != null) {
@@ -71,45 +73,12 @@ public final class DriverDataSource implements DataSource {
             if (driver == null) {
                 log.warn("Registered driver with driverClassName={} was not found,"
                         + " trying direct instantiation.", driverClassName);
-
-                Class<?> driverClass = null;
-                ClassLoader threadContextClassLoader = Thread.currentThread().getContextClassLoader();
-
-                try {
-                    if (threadContextClassLoader != null) {
-                        try {
-                            driverClass = threadContextClassLoader.loadClass(driverClassName);
-                            log.debug("Driver class {} found in Thread context class loader {}",
-                                    driverClassName, threadContextClassLoader);
-                        } catch (ClassNotFoundException ex) {
-                            log.debug("Driver class {} not found in Thread"
-                                            + " context class loader {}, trying classloader {}",
-                                    driverClassName, threadContextClassLoader, getClass().getClassLoader());
-                        }
-                    }
-
-                    if (driverClass == null) {
-                        driverClass = getClass().getClassLoader().loadClass(driverClassName);
-                        log.debug("Driver class {} found in the HikariConfig class classloader {}",
-                                driverClassName, getClass().getClassLoader());
-                    }
-                } catch (ClassNotFoundException ex) {
-                    log.debug("Failed to load driver class {} from HikariConfig class classloader {}",
-                            driverClassName, getClass().getClassLoader());
-                }
-
-                if (driverClass != null) {
-                    try {
-                        driver = (Driver) driverClass.getDeclaredConstructor().newInstance();
-                    } catch (Exception ex) {
-                        log.warn("Failed to create instance of driver class {},"
-                                + " trying jdbcUrl resolution", driverClassName, ex);
-                    }
-                }
+                driver = loadDriver(driverClassName);
             }
         }
 
         String sanitizedUrl = jdbcUrl.replaceAll("([?&;]password=)[^&#;]*(.*)", "$1<masked>$2");
+
         try {
             if (driver == null) {
                 driver = DriverManager.getDriver(jdbcUrl);
@@ -124,6 +93,50 @@ public final class DriverDataSource implements DataSource {
         }
     }
 
+    private @Nullable Driver loadDriver(String driverClassName) {
+        Class<?> driverClass = loadDriverClass(driverClassName);
+
+        if (driverClass != null) {
+            try {
+                return (Driver) driverClass.getDeclaredConstructor().newInstance();
+            } catch (IllegalAccessException | InvocationTargetException | SecurityException
+                     | NoSuchMethodException | InstantiationException | IllegalArgumentException ex) {
+                log.warn("Failed to create instance of driver class {},"
+                        + " trying jdbcUrl resolution", driverClassName, ex);
+            }
+        }
+        return null;
+    }
+
+    private @Nullable Class<?> loadDriverClass(String driverClassName) {
+        Class<?> driverClass = null;
+        ClassLoader threadContextClassLoader = Thread.currentThread().getContextClassLoader();
+
+        if (threadContextClassLoader != null) {
+            try {
+                driverClass = threadContextClassLoader.loadClass(driverClassName);
+                log.debug("Driver class {} found in Thread context class loader {}",
+                        driverClassName, threadContextClassLoader);
+            } catch (ClassNotFoundException ex) {
+                log.debug("Driver class {} not found in Thread"
+                                + " context class loader {}, trying classloader {}",
+                        driverClassName, threadContextClassLoader, getClass().getClassLoader());
+            }
+        }
+
+        if (driverClass == null) {
+            try {
+                driverClass = getClass().getClassLoader().loadClass(driverClassName);
+                log.debug("Driver class {} found in the HikariConfig class classloader {}",
+                        driverClassName, getClass().getClassLoader());
+            } catch (ClassNotFoundException ex) {
+                log.debug("Failed to load driver class {} from HikariConfig class classloader {}",
+                        driverClassName, getClass().getClassLoader());
+            }
+        }
+        return driverClass;
+    }
+
     @Override
     public Connection getConnection() throws SQLException {
         return driver.connect(jdbcUrl, driverProperties);
@@ -134,15 +147,15 @@ public final class DriverDataSource implements DataSource {
         Properties cloned = (Properties) driverProperties.clone();
 
         if (username != null) {
-            cloned.put(USER, username);
+            cloned.setProperty(USER, username);
 
             if (cloned.containsKey("username")) {
-                cloned.put("username", username);
+                cloned.setProperty("username", username);
             }
         }
 
         if (password != null) {
-            cloned.put(PASSWORD, password);
+            cloned.setProperty(PASSWORD, password);
         }
         return driver.connect(jdbcUrl, cloned);
     }
