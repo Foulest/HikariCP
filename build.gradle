@@ -33,7 +33,7 @@ dependencies {
 
     // SLF4J API - for logging
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
-    compileOnly group: 'org.slf4j', name: 'slf4j-api', version: '2.0.13'
+    compileOnly group: 'org.slf4j', name: 'slf4j-api', version: '2.0.16'
 
     // Metrics Core - for metrics
     // https://mvnrepository.com/artifact/io.dropwizard.metrics/metrics-core
