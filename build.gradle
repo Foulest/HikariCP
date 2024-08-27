@@ -41,7 +41,7 @@ dependencies {
 
     // Metrics Health Checks - for health checks
     // https://mvnrepository.com/artifact/io.dropwizard.metrics/metrics-healthchecks
-    compileOnly group: 'io.dropwizard.metrics', name: 'metrics-healthchecks', version: '4.2.26'
+    compileOnly group: 'io.dropwizard.metrics', name: 'metrics-healthchecks', version: '4.2.27'
 
     // Prometheus Simpleclient - for metrics
     // https://mvnrepository.com/artifact/io.prometheus/simpleclient
