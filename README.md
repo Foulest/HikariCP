@@ -4,13 +4,12 @@
 [![CodeQL Badge](https://github.com/Foulest/HikariCP/actions/workflows/codeql.yml/badge.svg)](https://github.com/Foulest/HikariCP/actions/workflows/codeql.yml)
 [![JitPack Badge](https://jitpack.io/v/Foulest/HikariCP.svg)](https://jitpack.io/#Foulest/HikariCP)
 [![Downloads](https://img.shields.io/github/downloads/Foulest/HikariCP/total.svg)](https://github.com/Foulest/HikariCP/releases)
-[![Lines of Code](https://img.shields.io/endpoint?url=https://ghloc.vercel.app/api/Foulest/HikariCP/badge?filter=.java$&style=flat&logoColor=white&label=Lines%20of%20Code)](https://ghloc.vercel.app/Foulest/HikariCP?branch=main)
 
 **HikariCP** is a lightweight, high-performance JDBC connection pool.
 
-This is, of course, an updated fork of the original **[HikariCP](https://github.com/brettwooldridge/HikariCP)** project.
-
-All credit for the original project goes to the
+> **Note:** This is an updated fork of the original **[HikariCP](https://github.com/brettwooldridge/HikariCP)** project.
+> 
+> All credit for the original project goes to the
 **[HikariCP](https://github.com/brettwooldridge/HikariCP/graphs/contributors)** team.
 
 ## Changes Made
