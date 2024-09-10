@@ -25,7 +25,7 @@ repositories {
 dependencies {
     // Micrometer Core - for metrics
     // https://mvnrepository.com/artifact/io.micrometer/micrometer-core
-    compileOnly group: 'io.micrometer', name: 'micrometer-core', version: '1.13.3'
+    compileOnly group: 'io.micrometer', name: 'micrometer-core', version: '1.13.4'
 
     // Javassist - for bytecode manipulation
     // https://mvnrepository.com/artifact/org.javassist/javassist
