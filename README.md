@@ -1,7 +1,7 @@
 # HikariCP
 
 [![License: Apache v2](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/license/apache-2-0)
-[![CodeQL Badge](https://github.com/Foulest/HikariCP/actions/workflows/codeql.yml/badge.svg)](https://github.com/Foulest/HikariCP/actions/workflows/codeql.yml)
+[![CodeQL](https://github.com/Foulest/HikariCP/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Foulest/HikariCP/actions/workflows/github-code-scanning/codeql)
 [![JitPack Badge](https://jitpack.io/v/Foulest/HikariCP.svg)](https://jitpack.io/#Foulest/HikariCP)
 [![Downloads](https://img.shields.io/github/downloads/Foulest/HikariCP/total.svg)](https://github.com/Foulest/HikariCP/releases)
 

@@ -8,8 +8,12 @@ group = 'com.zaxxer'
 version = '4.1.2'
 description = project.name
 
-compileJava.options.encoding = 'UTF-8'
-java.sourceCompatibility = JavaVersion.VERSION_1_8
+// Set the project's language level
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
+}
 
 repositories {
     // Maven repositories
@@ -76,6 +80,7 @@ tasks {
 
     compileJava {
         dependsOn(clean)
+        options.encoding = 'UTF-8'
     }
 
     build {
