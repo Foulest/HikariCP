@@ -41,7 +41,7 @@ dependencies {
 
     // Metrics Core - for metrics
     // https://mvnrepository.com/artifact/io.dropwizard.metrics/metrics-core
-    compileOnly group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.27'
+    compileOnly group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.28'
 
     // Metrics Health Checks - for health checks
     // https://mvnrepository.com/artifact/io.dropwizard.metrics/metrics-healthchecks
